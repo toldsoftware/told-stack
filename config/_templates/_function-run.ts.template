@@ -1,6 +1,0 @@
-import { runFunction } from '../../data-pattern-lookup-lsc/src-server/function-01-http';
-import { config } from "../config";
-
-module.exports = function (...args: any[]) {
-    runFunction.apply(null, [config, ...args]);
-}
