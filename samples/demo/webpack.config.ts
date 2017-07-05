@@ -1,6 +1,6 @@
 import * as webpack from 'webpack';
-import { webpack_generateEntry } from "./core/build/webpack-generate-entry";
 import { entries } from "./config/entries";
+import { webpack_generateEntry } from "../../src/build/webpack-generate-entry";
 
 // Use Nodemon to monitor this for changes
 // See package.json

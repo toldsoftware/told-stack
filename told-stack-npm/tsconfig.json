@@ -12,13 +12,13 @@
     "noImplicitAny": true,
     "noImplicitReturns": true,
     "noImplicitThis": true,
-    "outDir": "./_build",
+    "outDir": "./lib",
     "types": [
       "node"
     ],
     "lib": ["dom", "es5", "es2015"]
   },
   "include": [
-    "./**/*"
+    "./src/**/*"
   ]
 }
