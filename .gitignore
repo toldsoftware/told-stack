@@ -1,0 +1,9 @@
+node_modules
+build
+dist
+_extra
+_deploy
+__generated__
+
+# Ignore Launch Settings (which could include sensitive settings for testing)
+.vscode/launch.json
