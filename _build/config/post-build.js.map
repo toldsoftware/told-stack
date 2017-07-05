@@ -1,0 +1,1 @@
+{"version":3,"file":"post-build.js","sourceRoot":"","sources":["../../config/post-build.ts"],"names":[],"mappings":";;;;;;;;;;AAAA,2DAAuD;AACvD,wEAA0E;AAC1E,wGAA0F;AAC1F,wGAA0F;AAE1F;;QACI,MAAM,8BAAa,CAAC,EAAE,OAAO,EAAE,SAAS,EAAE,EAAE,CAAC,sCAAE,EAAE,sDAAE,EAAE,sDAAE,CAAC,CAAC,CAAC;IAC9D,CAAC;CAAA;AAFD,4BAEC;AAED,QAAQ,EAAE,CAAC"}

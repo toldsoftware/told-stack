@@ -1,5 +1,5 @@
 import * as f from '../../data-pattern-lookup-lsc/src-server/function-01-http';
-import { config } from "../config";
+import { config } from "../config-lookup-lsc";
 
 export const runFunction = (context: any, req: any) => f.runFunction(config, context, req);
 

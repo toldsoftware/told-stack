@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon -e ts --watch config --watch webpack.config.ts --exec \"webpack -w\""
+    "start-webpack": "nodemon -e ts --watch config --watch webpack.config.ts --exec \"webpack -w\"",
+    "start-post-build": "nodemon --watch _deploy --exec \"node ./_deploy/post-build.ts\""
   },
   "author": "Rick Love",
   "license": "MIT",

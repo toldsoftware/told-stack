@@ -1,14 +1,13 @@
-import * as webpack from 'webpack';
-import { webpack_generateEntry } from "./core/build/webpack-generate-entry";
-import { entries } from "./config/entries";
-
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const webpack = require("webpack");
+const generate_entry_webpack_config_1 = require("./config/generate-entry.webpack.config");
 // Use Nodemon to monitor this for changes
 // See package.json
 // npm start 
 // https://github.com/webpack/webpack-dev-server/issues/440
-const entry = webpack_generateEntry(__dirname, entries);
-
-const config: webpack.Configuration = {
+const entry = generate_entry_webpack_config_1.generateEntry(__dirname);
+const config = {
     // entry: {
     //     '../_deploy/lookup-lsc-01-http/bundle.js': `${__dirname}/src/_endpoints/lookup-lsc-01-http.ts`,
     //     '../_deploy/lookup-lsc-02-update-request-queue/bundle.js': `${__dirname}/src/_endpoints/lookup-lsc-02-update-request-queue.ts`,
@@ -40,5 +39,5 @@ const config: webpack.Configuration = {
         ]
     },
 };
-
-export default config;
+exports.default = config;
+//# sourceMappingURL=webpack.config.js.map
