@@ -3,6 +3,7 @@ build
 dist
 _extra
 _deploy
+_build
 __generated__
 
 # Ignore Launch Settings (which could include sensitive settings for testing)
