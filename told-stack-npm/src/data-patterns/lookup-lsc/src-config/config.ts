@@ -28,7 +28,12 @@ export interface DataUpdateConfig {
     getLookupBlobName(blobName: string): string;
     getDataDownloadBlobName(blobName: string, lookup: LookupBlob): string;
 
-    getKeyFromRequest(req: HttpFunctionRequest, bindingData: any): DataKey;
+    getKeyFromRequest(req: HttpFunctionRequest, bindingData: HttpFunction_BindingData): DataKey;
+}
+
+export interface HttpFunction_BindingData {
+    container: string;
+    blob: string;
 }
 
 export interface DataUpdateBlobConfig<T> extends DataUpdateConfig {
@@ -88,11 +93,8 @@ export class Config<T> implements DataAccessConfig, DataUpdateConfig, FunctionTe
 
     // Function Template
     http_route = this.apiRoutePath + '/{container}/{*blob}';
-    getKeyFromRequest(req: HttpFunctionRequest, bindingData: any): DataKey {
-        const d = bindingData as {
-            container: string,
-            blob: string,
-        };
+    getKeyFromRequest(req: HttpFunctionRequest, bindingData: HttpFunction_BindingData): DataKey {
+        const d = bindingData;
 
         return {
             containerName: d.container,

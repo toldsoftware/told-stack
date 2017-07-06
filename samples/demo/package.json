@@ -22,7 +22,7 @@
     "webpack": "^3.0.0"
   },
   "dependencies": {
-    "node-fetch": "^1.7.1",
-    "azure-storage": "^2.2.1"
+    "azure-storage": "^2.2.1",
+    "node-fetch": "^1.7.1"
   }
 }
