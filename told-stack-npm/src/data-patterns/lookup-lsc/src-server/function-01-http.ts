@@ -25,13 +25,17 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
                 name: "inLookupBlob",
                 type: "blob",
                 direction: "in",
-                path: config.lookupBlob_path
+                path: config.lookupBlob_path,
+                connection: config.lookupBlob_connection
+
             },
             {
                 name: "outUpdateRequestQueue",
                 type: "queue",
                 direction: "out",
-                queueName: config.updateRequestQueue_queueName
+                queueName: config.updateRequestQueue_queueName,
+                connection: config.updateRequestQueue_connection
+
             },
         ],
         disabled: false

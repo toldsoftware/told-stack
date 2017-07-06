@@ -11,19 +11,22 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
                 name: "inUpdateRequestQueue",
                 type: "queueTrigger",
                 direction: "in",
-                queueName: config.updateRequestQueue_queueName
+                queueName: config.updateRequestQueue_queueName,
+                connection: config.updateRequestQueue_connection
             },
             {
                 name: "inoutChangeBlob",
                 type: "blob",
                 direction: "inout",
-                path: config.changeBlob_path_fromQueueTrigger
+                path: config.changeBlob_path_fromQueueTrigger,
+                connection: config.changeBlob_connection
             },
             {
                 name: "outUpdateExecuteQueue",
                 type: "queue",
                 direction: "out",
-                queueName: config.updateExecuteQueue_queueName
+                queueName: config.updateExecuteQueue_queueName,
+                connection: config.updateExecuteQueue_connection
             },
         ],
         disabled: false

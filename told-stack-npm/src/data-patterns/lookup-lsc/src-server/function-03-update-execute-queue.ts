@@ -13,19 +13,22 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
                 name: "inUpdateExecuteQueue",
                 type: "queueTrigger",
                 direction: "in",
-                queueName: config.updateExecuteQueue_queueName
+                queueName: config.updateExecuteQueue_queueName,
+                connection: config.updateExecuteQueue_connection,
             },
             {
                 name: "inoutRawDataBlob",
                 type: "blob",
                 direction: "inout",
-                path: config.dataRawBlob_path_fromQueueTrigger
+                path: config.dataRawBlob_path_fromQueueTrigger,
+                connection: config.dataRawBlob_connection,
             },
             {
                 name: "outDataDownloadBlob",
                 type: "blob",
                 direction: "out",
-                path: config.dataDownloadBlob_path_fromQueueTriggerDate
+                path: config.dataDownloadBlob_path_fromQueueTriggerDate,
+                connection: config.dataDownloadBlob_connection,
             },
             // {
             //     name: "outChangeBlob",

@@ -26,7 +26,7 @@ export function createFunctionJson(config: HttpFunction_TemplateConfig) {
                 type: "queue",
                 direction: "out",
                 queueName: config.outputQueue_queueName,
-                connection: "AZURE_STORAGE_CONNECTION_STRING"
+                connection: config.outputQueue_connection
             },
         ],
         disabled: false

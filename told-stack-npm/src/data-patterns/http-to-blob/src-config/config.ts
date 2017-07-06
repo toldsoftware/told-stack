@@ -3,6 +3,7 @@ import { HttpFunctionRequest } from "../../../core/types/functions";
 export interface HttpFunction_TemplateConfig {
     http_route: string;
     outputBlob_path: string;
+    outputBlob_connection: string;
 }
 
 export interface HttpFunction_Config {

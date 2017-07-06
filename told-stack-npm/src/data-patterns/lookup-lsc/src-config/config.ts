@@ -37,12 +37,24 @@ export interface DataUpdateBlobConfig<T> extends DataUpdateConfig {
 
 export interface FunctionTemplateConfig {
     http_route: string;
+
+    lookupBlob_connection: string;
     lookupBlob_path: string;
+
+    updateRequestQueue_connection: string;
     updateRequestQueue_queueName: string;
+
+    updateExecuteQueue_connection: string;
     updateExecuteQueue_queueName: string;
+
+    changeBlob_connection: string;
     changeBlob_path: string;
     changeBlob_path_fromQueueTrigger: string;
+
+    dataRawBlob_connection: string;
     dataRawBlob_path_fromQueueTrigger: string;
+
+    dataDownloadBlob_connection: string;
     dataDownloadBlob_path_fromQueueTriggerDate: string;
 }
 
@@ -61,9 +73,18 @@ export class Config<T> implements DataAccessConfig, DataUpdateConfig, FunctionTe
     domain = '/';
     blobProxyRoutePath = 'blob';
 
-    constructor(public obtainBlobData: (oldBlob: T, key: DataKey) => Promise<T>, private apiRoutePath = 'api/lookup-lsc') {
+    lookupBlob_connection = this.default_storageConnectionString_AppSettingName;
+    updateRequestQueue_connection = this.default_storageConnectionString_AppSettingName;
+    updateExecuteQueue_connection = this.default_storageConnectionString_AppSettingName;
+    changeBlob_connection = this.default_storageConnectionString_AppSettingName;
+    dataRawBlob_connection = this.default_storageConnectionString_AppSettingName;
+    dataDownloadBlob_connection = this.default_storageConnectionString_AppSettingName;
 
-    }
+    constructor(
+        public obtainBlobData: (oldBlob: T, key: DataKey) => Promise<T>,
+        private apiRoutePath = 'api/lookup-lsc',
+        public default_storageConnectionString_AppSettingName = 'AZURE_STORAGE_CONNECTION_STRING'
+    ) { }
 
     // Function Template
     http_route = this.apiRoutePath + '/{container}/{blob}';
