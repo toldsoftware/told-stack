@@ -98,7 +98,10 @@ export class Config<T> implements DataAccessConfig, DataUpdateConfig, FunctionTe
     ) { }
 
     // Function Template
-    http_route = this.apiRoutePath + '/{container}/{*blob}';
+
+    // Slash in blobName is not supported (i.e. {*blob}) because table partitionKey/rowKey cannot / in the name
+    // http_route = this.apiRoutePath + '/{container}/{*blob}';
+    http_route = this.apiRoutePath + '/{container}/{blob}';
     getKeyFromRequest(req: HttpFunctionRequest, bindingData: HttpFunction_BindingData): DataKey {
         const d = bindingData;
 
@@ -116,15 +119,15 @@ export class Config<T> implements DataAccessConfig, DataUpdateConfig, FunctionTe
     lookupBlob_path = `{container}/{blob}/_lookup.txt`;
 
     lookupTable_tableName = `blobaccess`;
-    lookupTable_partitionKey = `{container}/{blob}`;
+    lookupTable_partitionKey = `{container}_{blob}`;
     lookupTable_rowKey = `lookup`;
 
     changeTable_tableName = `blobaccess`;
-    changeTable_partitionKey = `{container}/{blob}`;
+    changeTable_partitionKey = `{container}_{blob}`;
     changeTable_rowKey = `change`;
 
     changeTable_tableName_fromQueueTrigger = `blobaccess`;
-    changeTable_partitionKey_fromQueueTrigger = `{queueTrigger.containerName}/{queueTrigger.blobName}`;
+    changeTable_partitionKey_fromQueueTrigger = `{queueTrigger.containerName}_{queueTrigger.blobName}`;
     changeTable_rowKey_fromQueueTrigger = `change`;
 
     dataRawBlob_path_fromQueueTrigger = `{queueTrigger.containerName}/{queueTrigger.blobName}`;
