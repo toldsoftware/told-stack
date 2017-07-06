@@ -1,4 +1,4 @@
-import { FunctionTemplateConfig, DataUpdateConfig, DataKey, UpdateRequestQueueMessage } from "../src-config/config";
+import { FunctionTemplateConfig, DataUpdateConfig, DataKey, UpdateRequestQueueMessage, ChangeBlob } from "../src-config/config";
 
 // Queue Trigger: Update Request Queue
 // Blob In-Out: Changing Blob Singleton Check
@@ -14,10 +14,10 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
                 queueName: config.updateRequestQueue_queueName
             },
             {
-                name: "inoutChangingBlob",
+                name: "inoutChangeBlob",
                 type: "blob",
                 direction: "inout",
-                path: config.changingBlob_path_fromQueueTrigger
+                path: config.changeBlob_path_fromQueueTrigger
             },
             {
                 name: "outUpdateExecuteQueue",
@@ -38,20 +38,20 @@ export function runFunction(config: DataUpdateConfig, context: {
     },
     bindings: {
         inUpdateRequestQueue: UpdateRequestQueueMessage,
-        inoutChangingBlob: { startTime: number },
+        inoutChangeBlob: ChangeBlob,
         outUpdateExecuteQueue: UpdateRequestQueueMessage,
     }
 }) {
-    if (context.bindings.inoutChangingBlob
-        && context.bindings.inoutChangingBlob.startTime
-        && context.bindingData.insertionTime.getTime() < context.bindings.inoutChangingBlob.startTime + config.timeExecutionSeconds) {
+    if (context.bindings.inoutChangeBlob
+        && context.bindings.inoutChangeBlob.startTime
+        && context.bindingData.insertionTime.getTime() < context.bindings.inoutChangeBlob.startTime + config.timeExecutionSeconds * 1000) {
         // The update is already executing, don't do anything
         context.done();
         return;
     }
 
     // Queue Execute Update
-    context.bindings.inoutChangingBlob = { startTime: Date.now() };
+    context.bindings.inoutChangeBlob = { startTime: Date.now() };
     context.bindings.outUpdateExecuteQueue = context.bindings.inUpdateRequestQueue;
     context.done();
 }

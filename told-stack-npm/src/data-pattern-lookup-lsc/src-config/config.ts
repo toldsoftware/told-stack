@@ -5,22 +5,28 @@ export interface DataKey {
     blobName: string;
 }
 
+export type LookupBlob = { startTime: number };
+
 export interface DataAccessConfig {
     timePollSeconds: number;
     maxPollCount: number;
 
     getLookupUrl(key: DataKey): string;
-    getDataDownloadUrl(key: DataKey, lookup: string): string;
+    getDataDownloadUrl(key: DataKey, lookup: LookupBlob): string;
+}
+
+export interface ChangeBlob {
+    startTime: number;
 }
 
 export interface DataUpdateConfig {
-    timeStaleSeconds: number;
+    timeToLiveSeconds: number;
     timeExtendSeconds: number;
     timeExecutionSeconds: number;
     timePollSeconds: number;
 
     getLookupBlobName(blobName: string): string;
-    getDataDownloadBlobName(blobName: string, lookup: string): string;
+    getDataDownloadBlobName(blobName: string, lookup: LookupBlob): string;
 
     getKeyFromRequest(req: HttpFunctionRequest, bindingData: any): DataKey;
 
@@ -32,16 +38,18 @@ export interface FunctionTemplateConfig {
     lookupBlob_path: string;
     updateRequestQueue_queueName: string;
     updateExecuteQueue_queueName: string;
-    changingBlob_path_fromQueueTrigger: string;
+    changeBlob_path: string;
+    changeBlob_path_fromQueueTrigger: string;
     dataRawBlob_path_fromQueueTrigger: string;
+    dataDownloadBlob_path_fromQueueTriggerDate: string;
 }
 
 export interface UpdateRequestQueueMessage extends DataKey {
-
+    startTime: number;
 }
 
 export class Config implements DataAccessConfig, DataUpdateConfig, FunctionTemplateConfig {
-    timeStaleSeconds = 60;
+    timeToLiveSeconds = 60;
     timeExtendSeconds = 10;
     timeExecutionSeconds = 10;
 
@@ -75,15 +83,17 @@ export class Config implements DataAccessConfig, DataUpdateConfig, FunctionTempl
     // These will encode to a url that receives parametes
     // Example: '{container}/{blob}/_lookup.txt'
 
-    lookupBlob_path = `{container}/${this.getLookupBlobName('{blob}')}`;
-    changingBlob_path_fromQueueTrigger = `{queueTrigger.containerName}/{queueTrigger.blobName}/changing`;
+    lookupBlob_path = `{container}/{blob}/_lookup.txt`;
+    changeBlob_path = `{container}/{blob}/changing`;
+    changeBlob_path_fromQueueTrigger = `{queueTrigger.containerName}/{queueTrigger.blobName}/changing`;
     dataRawBlob_path_fromQueueTrigger = `{queueTrigger.containerName}/{queueTrigger.blobName}`;
+    dataDownloadBlob_path_fromQueueTriggerDate = `{queueTrigger.containerName}/{queueTrigger.blobName}/{queueTrigger.startTime}.gzip`;
 
     getLookupUrl(key: DataKey): string {
         return `${this.domain}/${this.apiRoutePath}/${key.containerName}/${key.blobName}`;
     }
 
-    getDataDownloadUrl(key: DataKey, lookup: string): string {
+    getDataDownloadUrl(key: DataKey, lookup: LookupBlob): string {
         return `${this.domain}/${this.blobProxyRoutePath}/${key.containerName}/${this.getDataDownloadBlobName(key.blobName, lookup)}`;
     }
 
@@ -91,8 +101,8 @@ export class Config implements DataAccessConfig, DataUpdateConfig, FunctionTempl
         return `${blobName}/_lookup.txt`;
     }
 
-    getDataDownloadBlobName(blobName: string, lookup: string) {
+    getDataDownloadBlobName(blobName: string, lookup: LookupBlob) {
         // TODO: Test if works with .ext and switch to underscore if needed
-        return `${blobName}/${lookup}.gzip`;
+        return `${blobName}/${lookup.startTime}.gzip`;
     }
 }

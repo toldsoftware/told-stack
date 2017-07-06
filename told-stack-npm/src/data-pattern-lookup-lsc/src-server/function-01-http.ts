@@ -1,4 +1,4 @@
-import { DataUpdateConfig, DataKey, FunctionTemplateConfig, UpdateRequestQueueMessage } from "../src-config/config";
+import { DataUpdateConfig, DataKey, FunctionTemplateConfig, UpdateRequestQueueMessage, ChangeBlob, LookupBlob } from "../src-config/config";
 import { HttpFunctionResponse, HttpFunctionRequest } from "../../core/types/functions";
 
 // Http Request: Handle Update Request
@@ -42,19 +42,37 @@ export function runFunction(config: DataUpdateConfig, context: {
     log: typeof console.log,
     done: () => void,
     res: HttpFunctionResponse,
-    bindingData: any,
+    bindingData: {},
     bindings: {
-        inLookupBlob: string,
+        inLookupBlob: LookupBlob,
         outUpdateRequestQueue: UpdateRequestQueueMessage,
     }
 }, req: HttpFunctionRequest) {
     const dataKey = config.getKeyFromRequest(req, context.bindingData);
+    const lookup = context.bindings.inLookupBlob;
+
+    // If the blob value is not stale
+    // Return Current Blob Value with Long TTL
+    const remainingTtl = lookup && lookup.startTime
+        && (lookup.startTime + config.timeToLiveSeconds * 1000 - Date.now());
+
+    if (remainingTtl > 0) {
+
+        // Return Old Lookup (Long TTL)
+        context.res = {
+            body: lookup,
+            headers: {
+                'Cache-Control': `public, max-age=${remainingTtl}`
+            }
+        };
+        context.done();
+        return;
+    }
 
     // Set Update Request Queue
-    context.bindings.outUpdateRequestQueue = dataKey;
+    context.bindings.outUpdateRequestQueue = { ...dataKey, startTime: Date.now() };
 
     // Return Current Blob Value with Short TTL
-    const lookup = context.bindings.inLookupBlob
 
     if (!lookup) {
         // Deal with missing lookup (First time request?)
@@ -65,15 +83,16 @@ export function runFunction(config: DataUpdateConfig, context: {
                 'Cache-Control': `public, max-age=${config.timeExtendSeconds}`
             }
         };
-    } else {
-        // Return Old Lookup
-        context.res = {
-            body: lookup,
-            headers: {
-                'Cache-Control': `public, max-age=${config.timeExtendSeconds}`
-            }
-        };
+        context.done();
+        return;
     }
 
+    // Return Old Lookup (Short)
+    context.res = {
+        body: lookup,
+        headers: {
+            'Cache-Control': `public, max-age=${config.timeExtendSeconds}`
+        }
+    };
     context.done();
 };

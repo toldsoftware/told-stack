@@ -1,4 +1,5 @@
-import { FunctionTemplateConfig, DataUpdateConfig, DataKey, UpdateRequestQueueMessage } from "../src-config/config";
+import { FunctionTemplateConfig, DataUpdateConfig, DataKey, UpdateRequestQueueMessage, ChangeBlob, LookupBlob } from "../src-config/config";
+import { gzipText } from "../../core/utils/gzip";
 
 // Queue Trigger: Update Request Queue
 // Blob Out: Changing Blob
@@ -21,11 +22,24 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
                 path: config.dataRawBlob_path_fromQueueTrigger
             },
             {
-                name: "outChangingBlob",
+                name: "outDataDownloadBlob",
                 type: "blob",
                 direction: "out",
-                path: config.changingBlob_path_fromQueueTrigger
+                path: config.dataDownloadBlob_path_fromQueueTriggerDate
             },
+            // {
+            //     name: "outChangeBlob",
+            //     type: "blob",
+            //     direction: "out",
+            //     path: config.changeBlob_path_fromQueueTrigger
+            // },
+            {
+                name: "outLookupBlob",
+                type: "blob",
+                direction: "out",
+                path: config.lookupBlob_path
+            },
+
         ],
         disabled: false
     };
@@ -34,15 +48,20 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
 export async function runFunction(config: DataUpdateConfig, context: {
     log: typeof console.log,
     done: () => void,
-    bindingData: {
-    },
+    bindingData: {},
     bindings: {
         inUpdateExecuteQueue: UpdateRequestQueueMessage,
         inoutRawDataBlob: any,
-        outChangingBlob: { startTime: number },
+        outDataDownloadBlob: any,
+        // outChangeBlob: ChangeBlob,
+        outLookupBlob: LookupBlob,
     }
 }) {
-    context.bindings.inoutRawDataBlob = await config.obtainBlobData(context.bindings.inoutRawDataBlob, context.bindings.inUpdateExecuteQueue);
-    context.bindings.outChangingBlob = null;
+    const blobData = await config.obtainBlobData(context.bindings.inoutRawDataBlob, context.bindings.inUpdateExecuteQueue);
+    context.bindings.inoutRawDataBlob = blobData;
+    context.bindings.outDataDownloadBlob = await gzipText(JSON.stringify(blobData));
+
+    // context.bindings.outChangeBlob = null;
+    context.bindings.outLookupBlob = { startTime: context.bindings.inUpdateExecuteQueue.startTime };
     context.done();
 }

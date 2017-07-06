@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-import { DataAccessConfig, DataKey } from "../src-config/config";
+import { DataAccessConfig, DataKey, LookupBlob } from "../src-config/config";
 
 export class DataAccess {
     constructor(private config: DataAccessConfig) { }
@@ -20,7 +20,7 @@ export async function readAppBlob<T>(config: DataAccessConfig, key: DataKey) {
 
 export async function readAppBlob_inner<T>(config: DataAccessConfig, key: DataKey) {
     const rLookup = await fetch(config.getLookupUrl(key));
-    const lookup = await rLookup.text();
+    const lookup = await rLookup.json() as LookupBlob;
     const r = await fetch(config.getDataDownloadUrl(key, lookup));
     const data = await r.json() as T;
     return { data, lookup };
@@ -38,9 +38,9 @@ export async function readAppBlobAndUpdate<T>(config: DataAccessConfig, key: Dat
             }
 
             const rLookup_update = await fetch(config.getLookupUrl(key));
-            const lName_update = await rLookup_update.text();
+            const lName_update = await rLookup_update.json() as LookupBlob;
 
-            if (lName_update !== lookup) {
+            if (JSON.stringify(lName_update) !== JSON.stringify(lookup)) {
                 clearInterval(intervalId);
                 notifyUpdate();
             }
