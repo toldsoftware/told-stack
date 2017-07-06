@@ -5,6 +5,6 @@ export interface HttpFunctionRequest {
 
 export interface HttpFunctionResponse {
     status?: number;
-    body: any;
+    body?: any;
     headers?: { [name: string]: string }
 }
