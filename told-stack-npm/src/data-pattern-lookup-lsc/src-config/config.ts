@@ -29,8 +29,10 @@ export interface DataUpdateConfig {
     getDataDownloadBlobName(blobName: string, lookup: LookupBlob): string;
 
     getKeyFromRequest(req: HttpFunctionRequest, bindingData: any): DataKey;
+}
 
-    obtainBlobData<T>(oldBlob: T, key: DataKey): Promise<T>;
+export interface DataUpdateBlobConfig<T> extends DataUpdateConfig {
+    obtainBlobData(oldBlob: T, key: DataKey): Promise<T>;
 }
 
 export interface FunctionTemplateConfig {
@@ -48,7 +50,7 @@ export interface UpdateRequestQueueMessage extends DataKey {
     startTime: number;
 }
 
-export class Config implements DataAccessConfig, DataUpdateConfig, FunctionTemplateConfig {
+export class Config<T> implements DataAccessConfig, DataUpdateConfig, FunctionTemplateConfig {
     timeToLiveSeconds = 60;
     timeExtendSeconds = 10;
     timeExecutionSeconds = 10;
@@ -57,10 +59,9 @@ export class Config implements DataAccessConfig, DataUpdateConfig, FunctionTempl
     maxPollCount = 3;
 
     domain = '/';
-    apiRoutePath = 'api/lookup-lsc';
     blobProxyRoutePath = 'blob';
 
-    constructor(public obtainBlobData: <T>(oldBlob: T, key: DataKey) => Promise<T>) {
+    constructor(public obtainBlobData: (oldBlob: T, key: DataKey) => Promise<T>, private apiRoutePath = 'api/lookup-lsc') {
 
     }
 

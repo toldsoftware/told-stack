@@ -1,4 +1,4 @@
-import { FunctionTemplateConfig, DataUpdateConfig, DataKey, UpdateRequestQueueMessage, ChangeBlob, LookupBlob } from "../src-config/config";
+import { FunctionTemplateConfig, DataUpdateConfig, DataKey, UpdateRequestQueueMessage, ChangeBlob, LookupBlob, DataUpdateBlobConfig } from "../src-config/config";
 import { gzipText } from "../../core/utils/gzip";
 
 // Queue Trigger: Update Request Queue
@@ -45,7 +45,7 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
     };
 }
 
-export async function runFunction(config: DataUpdateConfig, context: {
+export async function runFunction(config: DataUpdateBlobConfig<any>, context: {
     log: typeof console.log,
     done: () => void,
     bindingData: {},
