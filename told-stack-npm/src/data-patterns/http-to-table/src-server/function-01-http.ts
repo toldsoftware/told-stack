@@ -1,4 +1,4 @@
-import { HttpFunction_Config, HttpFunction_TemplateConfig, OutputQueueData, HttpFunction_BindingData } from "../src-config/config";
+import { HttpFunction_Config, HttpFunction_TemplateConfig, OutputTableData, HttpFunction_BindingData } from "../src-config/config";
 import { HttpFunctionResponse, HttpFunctionRequest } from "../../../core/types/functions";
 
 // Http Request: Handle Update Request
@@ -22,8 +22,8 @@ export function createFunctionJson(config: HttpFunction_TemplateConfig) {
                 direction: "out"
             },
             {
-                name: "outOutputQueue",
-                type: "queue",
+                name: "outOutputTable",
+                type: "table",
                 direction: "out",
                 tableName: config.outputTable_tableName,
                 partitionKey: config.outputTable_partitionKey,
@@ -41,14 +41,14 @@ export function runFunction(config: HttpFunction_Config, context: {
     res: HttpFunctionResponse,
     bindingData: HttpFunction_BindingData,
     bindings: {
-        outOutputQueue: OutputQueueData,
+        outOutputTable: OutputTableData,
     }
 }, req: HttpFunctionRequest) {
     const data = config.getDataFromRequest(req, context.bindingData);
-    context.bindings.outOutputQueue = data;
+    context.bindings.outOutputTable = data;
     // context.log('The Data was Queued', data);
     context.res = {
-        body: 'The Data was Queued'
+        body: 'The Data was Stored in a Table'
     };
     context.done();
 };

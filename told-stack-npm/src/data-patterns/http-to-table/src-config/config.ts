@@ -10,15 +10,16 @@ export interface HttpFunction_TemplateConfig {
 }
 
 export interface HttpFunction_Config {
-    getDataFromRequest(req: HttpFunctionRequest, bindingData: HttpFunction_BindingData): OutputQueueData;
+    getDataFromRequest(req: HttpFunctionRequest, bindingData: HttpFunction_BindingData): OutputTableData;
 }
 
 export interface HttpFunction_BindingData {
-    key: string;
+    table: string;
+    partition: string;
+    row: string;
 }
 
-export interface OutputQueueData {
-    key: string;
+export interface OutputTableData {
     value: any;
 }
 
@@ -35,6 +36,6 @@ export class Config<T> implements HttpFunction_TemplateConfig, HttpFunction_Conf
     outputTable_connection = this.default_storageConnectionString_AppSettingName;
 
     getDataFromRequest(req: HttpFunctionRequest, bindingData: HttpFunction_BindingData) {
-        return { key: bindingData.key, value: req.body };
+        return { value: req.body };
     }
 }
