@@ -25,7 +25,7 @@ export class Config<T> implements HttpFunction_TemplateConfig, HttpFunction_Conf
         public http_routeRoot = 'api/http-to-queue',
         public default_storageConnectionString_AppSettingName = 'AZURE_STORAGE_CONNECTION_STRING') { }
 
-    http_route = this.http_routeRoot + '/{container}/{blob}';
+    http_route = this.http_routeRoot + '/{container}/{*blob}';
     outputBlob_path = '{container}/{blob}';
     outputBlob_connection = this.default_storageConnectionString_AppSettingName;
 

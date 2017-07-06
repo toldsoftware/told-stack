@@ -27,7 +27,6 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
                 direction: "in",
                 path: config.lookupBlob_path,
                 connection: config.lookupBlob_connection
-
             },
             {
                 name: "outUpdateRequestQueue",
@@ -35,7 +34,6 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
                 direction: "out",
                 queueName: config.updateRequestQueue_queueName,
                 connection: config.updateRequestQueue_connection
-
             },
         ],
         disabled: false

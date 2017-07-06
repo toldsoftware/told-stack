@@ -87,7 +87,7 @@ export class Config<T> implements DataAccessConfig, DataUpdateConfig, FunctionTe
     ) { }
 
     // Function Template
-    http_route = this.apiRoutePath + '/{container}/{blob}';
+    http_route = this.apiRoutePath + '/{container}/{*blob}';
     getKeyFromRequest(req: HttpFunctionRequest, bindingData: any): DataKey {
         const d = bindingData as {
             container: string,
