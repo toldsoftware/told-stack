@@ -1,10 +1,8 @@
 node_modules
-build
 dist
 lib
 _extra
 _deploy
-_build
 _intermediate
 __generated__
 

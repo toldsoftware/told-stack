@@ -3,7 +3,7 @@
     "node_modules"
   ],
   "compilerOptions": {
-    "declaration": true,
+    "declaration": false,
     "noResolve": false,
     "module": "commonjs",
     "target": "es2015",
@@ -19,6 +19,8 @@
     "lib": ["dom", "es5", "es2015"]
   },
   "include": [
-    "./src/**/*"
+    "./src/**/*",
+    "./config/**/*",
+    "./build/**/*"
   ]
 }

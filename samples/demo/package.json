@@ -1,17 +1,17 @@
 {
-  "name": "@told/stack",
+  "name": "told-stack-demo",
   "version": "1.0.0",
-  "description": "Monorepo for Feature Oriented Modules",
+  "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "run-p start-pre-build start-webpack start-post-build",
-    "start-pre-build": "nodemon -e ts --watch config/entries.ts --exec \"ts-node ./core/build/pre-build.ts\"",
+    "start-pre-build": "nodemon -e ts --watch config/entries.ts --exec \"ts-node ./build/pre-build.ts\"",
     "start-webpack": "nodemon -e ts --watch config --watch webpack.config.ts --exec \"webpack -w\"",
-    "start-post-build": "nodemon -e ts --watch config/entries.ts --exec \"ts-node ./core/build/post-build.ts\""
+    "start-post-build": "nodemon -e ts --watch config/entries.ts --exec \"ts-node ./build/post-build.ts\""
   },
-  "author": "Rick Love",
-  "license": "MIT",
+  "author": "",
+  "license": "ISC",
   "devDependencies": {
     "@types/node-fetch": "^1.6.7",
     "@types/webpack": "^3.0.1",
@@ -21,7 +21,7 @@
     "typescript": "^2.4.1",
     "webpack": "^3.0.0"
   },
-  "peerDependencies":{
+  "dependencies": {
     "node-fetch": "^1.7.1",
     "azure-storage": "^2.2.1"
   }

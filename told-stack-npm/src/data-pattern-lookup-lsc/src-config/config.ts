@@ -1,3 +1,5 @@
+import { HttpFunctionRequest } from "../../core/types/functions";
+
 export interface DataKey {
     containerName: string;
     blobName: string;
