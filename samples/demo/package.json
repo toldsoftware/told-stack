@@ -10,8 +10,8 @@
     "start-webpack": "nodemon -e ts --watch config --watch webpack.config.ts --exec \"webpack -w\"",
     "start-post-build": "nodemon -e ts --watch config/entries.ts --exec \"ts-node ./build/post-build.ts\""
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Rick Love",
+  "license": "MIT",
   "devDependencies": {
     "@types/node-fetch": "^1.6.7",
     "@types/webpack": "^3.0.1",

@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { asyncNode_noError } from "../core/utils/async-node";
 import { EntryInfoResolved, EntryInfo } from "../core/types/entry";
+import { joinImportPath } from "./join-import-path";
 
 const deployDir = '_deploy';
 const intermediateDir = '_intermediate';
@@ -61,9 +62,8 @@ export async function ensureDirectoryExists(dir: string) {
 }
 
 function getRunFunctionFile(entry: EntryInfo) {
-    const importPath = path.join('../../config/', entry.import).replace(/\\/g, '/');
-    const configImportPath = path.join('../../config/', entry.configImport).replace(/\\/g, '/');
-
+    const importPath = joinImportPath('../../config/', entry.import);
+    const configImportPath = joinImportPath('../../config/', entry.configImport);
 
     return `
 import { runFunction } from '${importPath}';
