@@ -1,9 +1,9 @@
-import { DataUpdateConfig, DataKey, FunctionTemplateConfig, UpdateRequestQueueMessage, ChangeBlob, LookupBlob, HttpFunction_BindingData } from "../src-config/config";
+import { DataUpdateConfig, DataKey, FunctionTemplateConfig, UpdateRequestQueueMessage, ChangeTable, LookupTable, HttpFunction_BindingData } from "../src-config/config";
 import { HttpFunctionResponse, HttpFunctionRequest } from "../../../core/types/functions";
 import { readBlob } from "../../../core/utils/azure-storage/blobs";
 
 // Http Request: Handle Update Request
-// Blob In: Read Old Lookup Blob Value
+// Table In: Read Old Lookup Blob Value
 // Queue Out: Update Request Queue
 // Http Response: Return Old Lookup Value with Short TTL
 
@@ -22,14 +22,15 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
                 type: "http",
                 direction: "out"
             },
-            // Input Blobs Binding doesn't work if it may not exist
-            // {
-            //     name: "inLookupBlob",
-            //     type: "blob",
-            //     direction: "in",
-            //     path: config.lookupBlob_path,
-            //     connection: config.lookupBlob_connection
-            // },
+            {
+                name: "inLookupTable",
+                type: "table",
+                direction: "in",
+                tableName: config.lookupTable_tableName,
+                partitionKey: config.lookupTable_partitionKey,
+                rowKey: config.lookupTable_rowKey,
+                connection: config.lookupBlob_connection
+            },
             {
                 name: "outUpdateRequestQueue",
                 type: "queue",
@@ -48,15 +49,14 @@ export async function runFunction(config: DataUpdateConfig, context: {
     res: HttpFunctionResponse,
     bindingData: HttpFunction_BindingData,
     bindings: {
-        // inLookupBlob: LookupBlob,
+        inLookupTable: LookupTable,
         outUpdateRequestQueue: UpdateRequestQueueMessage,
     }
 }, req: HttpFunctionRequest) {
     context.log('START');
 
     const dataKey = config.getKeyFromRequest(req, context.bindingData);
-    // const lookup = context.bindings.inLookupBlob;
-    const lookup = await readBlob<LookupBlob>(dataKey.containerName, config.getLookupBlobName(dataKey.blobName));
+    const lookup = context.bindings.inLookupTable;
     
     context.log('Lookup', { lookup });
 

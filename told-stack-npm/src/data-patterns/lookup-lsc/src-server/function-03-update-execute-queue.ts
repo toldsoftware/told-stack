@@ -1,10 +1,10 @@
-import { FunctionTemplateConfig, DataUpdateConfig, DataKey, UpdateRequestQueueMessage, ChangeBlob, LookupBlob, DataUpdateBlobConfig } from "../src-config/config";
+import { FunctionTemplateConfig, DataUpdateConfig, DataKey, UpdateRequestQueueMessage, ChangeTable, LookupTable, DataUpdateBlobConfig } from "../src-config/config";
 import { gzipText } from "../../../core/utils/gzip";
 
 // Queue Trigger: Update Request Queue
-// Blob Out: Changing Blob
-// Blob In-Out: Data Blob
-// Blob Out: Lookup Blob
+// Blob In-Out: Raw Data Blob
+// Blob Out: Download Data Blob
+// Table Out: Lookup Blob
 
 export function createFunctionJson(config: FunctionTemplateConfig) {
     return {
@@ -30,18 +30,13 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
                 path: config.dataDownloadBlob_path_fromQueueTriggerDate,
                 connection: config.dataDownloadBlob_connection,
             },
-            // {
-            //     name: "outChangeBlob",
-            //     type: "blob",
-            //     direction: "out",
-            //     path: config.changeBlob_path_fromQueueTrigger,
-            //     connection: config.changeBlob_connection
-            // },
             {
-                name: "outLookupBlob",
+                name: "outLookupTable",
                 type: "blob",
                 direction: "out",
-                path: config.lookupBlob_path,
+                tableName: config.lookupTable_tableName,
+                partitionKey: config.lookupTable_partitionKey,
+                rowKey: config.lookupTable_rowKey,
                 connection: config.lookupBlob_connection,
             },
 
@@ -58,15 +53,12 @@ export async function runFunction(config: DataUpdateBlobConfig<any>, context: {
         inUpdateExecuteQueue: UpdateRequestQueueMessage,
         inoutRawDataBlob: any,
         outDataDownloadBlob: any,
-        // outChangeBlob: ChangeBlob,
-        outLookupBlob: LookupBlob,
+        outLookupTable: LookupTable,
     }
 }) {
     const blobData = await config.obtainBlobData(context.bindings.inoutRawDataBlob, context.bindings.inUpdateExecuteQueue);
     context.bindings.inoutRawDataBlob = blobData;
     context.bindings.outDataDownloadBlob = await gzipText(JSON.stringify(blobData));
-
-    // context.bindings.outChangeBlob = null;
-    context.bindings.outLookupBlob = { startTime: context.bindings.inUpdateExecuteQueue.startTime };
+    context.bindings.outLookupTable = { startTime: context.bindings.inUpdateExecuteQueue.startTime };
     context.done();
 }

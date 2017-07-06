@@ -34,7 +34,7 @@ export function createFunctionJson(config: HttpFunction_TemplateConfig) {
     };
 }
 
-export function runFunction(config: HttpFunction_Config, context: {
+export async function runFunction(config: HttpFunction_Config, context: {
     log: typeof console.log,
     done: () => void,
     res: HttpFunctionResponse,
@@ -44,9 +44,12 @@ export function runFunction(config: HttpFunction_Config, context: {
     }
 }, req: HttpFunctionRequest) {
     // const data = context.bindings.inInputBlob;
-    const data = readBlob<InputBlobData>(context.bindingData.container, context.bindingData.blob);
+    const data = await readBlob<InputBlobData>(context.bindingData.container, context.bindingData.blob);
     context.res = {
-        body: data
+        body: data,
+        headers: {
+            'Content-Type': 'application/json'
+        }
     };
     context.done();
 };

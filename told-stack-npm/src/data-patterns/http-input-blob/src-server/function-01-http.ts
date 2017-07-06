@@ -44,7 +44,10 @@ export function runFunction(config: HttpFunction_Config, context: {
 }, req: HttpFunctionRequest) {
     const data = context.bindings.inInputBlob;
     context.res = {
-        body: data
+        body: data,
+        headers: {
+            'Content-Type': 'application/json'
+        }
     };
     context.done();
 };

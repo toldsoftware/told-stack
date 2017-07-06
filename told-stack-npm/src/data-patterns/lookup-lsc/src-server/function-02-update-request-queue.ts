@@ -1,7 +1,7 @@
-import { FunctionTemplateConfig, DataUpdateConfig, DataKey, UpdateRequestQueueMessage, ChangeBlob } from "../src-config/config";
+import { FunctionTemplateConfig, DataUpdateConfig, DataKey, UpdateRequestQueueMessage, ChangeTable } from "../src-config/config";
 
 // Queue Trigger: Update Request Queue
-// Blob In-Out: Changing Blob Singleton Check
+// Table In-Out: Changing Blob Singleton Check
 // Queue Out: Update Execute Queue Only Once Per Stale Timeout
 
 export function createFunctionJson(config: FunctionTemplateConfig) {
@@ -15,11 +15,13 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
                 connection: config.updateRequestQueue_connection
             },
             {
-                name: "inoutChangeBlob",
+                name: "inoutChangeTable",
                 type: "blob",
                 direction: "inout",
-                path: config.changeBlob_path_fromQueueTrigger,
-                connection: config.changeBlob_connection
+                tableName: config.changeTable_tableName_fromQueueTrigger,
+                partitionKey: config.changeTable_partitionKey_fromQueueTrigger,
+                rowKey: config.changeTable_rowKey_fromQueueTrigger,
+                connection: config.changeTable_connection
             },
             {
                 name: "outUpdateExecuteQueue",
@@ -27,6 +29,15 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
                 direction: "out",
                 queueName: config.updateExecuteQueue_queueName,
                 connection: config.updateExecuteQueue_connection
+            },
+
+            // BUG FIX: To Prevent inout RawDataBlob from crashing next step if it doesn't exist
+            {
+                name: "outRawDataBlob",
+                type: "blob",
+                direction: "out",
+                path: config.dataRawBlob_path_fromQueueTrigger,
+                connection: config.dataRawBlob_connection,
             },
         ],
         disabled: false
@@ -41,20 +52,26 @@ export function runFunction(config: DataUpdateConfig, context: {
     },
     bindings: {
         inUpdateRequestQueue: UpdateRequestQueueMessage,
-        inoutChangeBlob: ChangeBlob,
+        inoutChangeTable: ChangeTable,
         outUpdateExecuteQueue: UpdateRequestQueueMessage,
+        outRawDataBlob: any,
     }
 }) {
-    if (context.bindings.inoutChangeBlob
-        && context.bindings.inoutChangeBlob.startTime
-        && context.bindingData.insertionTime.getTime() < context.bindings.inoutChangeBlob.startTime + config.timeExecutionSeconds * 1000) {
+    // BUG FIX: To Prevent inout RawDataBlob from crashing next step if it doesn't exist
+    if (!context.bindings.inoutChangeTable) {
+        context.bindings.outRawDataBlob = {};
+    }
+
+    if (context.bindings.inoutChangeTable
+        && context.bindings.inoutChangeTable.startTime
+        && context.bindingData.insertionTime.getTime() < context.bindings.inoutChangeTable.startTime + config.timeExecutionSeconds * 1000) {
         // The update is already executing, don't do anything
         context.done();
         return;
     }
 
     // Queue Execute Update
-    context.bindings.inoutChangeBlob = { startTime: Date.now() };
+    context.bindings.inoutChangeTable = { startTime: Date.now() };
     context.bindings.outUpdateExecuteQueue = context.bindings.inUpdateRequestQueue;
     context.done();
 }

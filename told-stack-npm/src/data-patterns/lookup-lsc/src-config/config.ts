@@ -5,17 +5,17 @@ export interface DataKey {
     blobName: string;
 }
 
-export type LookupBlob = { startTime: number };
+export type LookupTable = { startTime: number };
 
 export interface DataAccessConfig {
     timePollSeconds: number;
     maxPollCount: number;
 
     getLookupUrl(key: DataKey): string;
-    getDataDownloadUrl(key: DataKey, lookup: LookupBlob): string;
+    getDataDownloadUrl(key: DataKey, lookup: LookupTable): string;
 }
 
-export interface ChangeBlob {
+export interface ChangeTable {
     startTime: number;
 }
 
@@ -26,7 +26,7 @@ export interface DataUpdateConfig {
     timePollSeconds: number;
 
     getLookupBlobName(blobName: string): string;
-    getDataDownloadBlobName(blobName: string, lookup: LookupBlob): string;
+    getDataDownloadBlobName(blobName: string, lookup: LookupTable): string;
 
     getKeyFromRequest(req: HttpFunctionRequest, bindingData: HttpFunction_BindingData): DataKey;
 }
@@ -44,7 +44,9 @@ export interface FunctionTemplateConfig {
     http_route: string;
 
     lookupBlob_connection: string;
-    lookupBlob_path: string;
+    lookupTable_tableName: string;
+    lookupTable_partitionKey: string;
+    lookupTable_rowKey: string;
 
     updateRequestQueue_connection: string;
     updateRequestQueue_queueName: string;
@@ -52,9 +54,13 @@ export interface FunctionTemplateConfig {
     updateExecuteQueue_connection: string;
     updateExecuteQueue_queueName: string;
 
-    changeBlob_connection: string;
-    changeBlob_path: string;
-    changeBlob_path_fromQueueTrigger: string;
+    changeTable_connection: string;
+    changeTable_tableName: string;
+    changeTable_partitionKey: string;
+    changeTable_rowKey: string;
+    changeTable_tableName_fromQueueTrigger: string;
+    changeTable_partitionKey_fromQueueTrigger: string;
+    changeTable_rowKey_fromQueueTrigger: string;
 
     dataRawBlob_connection: string;
     dataRawBlob_path_fromQueueTrigger: string;
@@ -81,7 +87,7 @@ export class Config<T> implements DataAccessConfig, DataUpdateConfig, FunctionTe
     lookupBlob_connection = this.default_storageConnectionString_AppSettingName;
     updateRequestQueue_connection = this.default_storageConnectionString_AppSettingName;
     updateExecuteQueue_connection = this.default_storageConnectionString_AppSettingName;
-    changeBlob_connection = this.default_storageConnectionString_AppSettingName;
+    changeTable_connection = this.default_storageConnectionString_AppSettingName;
     dataRawBlob_connection = this.default_storageConnectionString_AppSettingName;
     dataDownloadBlob_connection = this.default_storageConnectionString_AppSettingName;
 
@@ -108,8 +114,19 @@ export class Config<T> implements DataAccessConfig, DataUpdateConfig, FunctionTe
     // Example: '{container}/{blob}/_lookup.txt'
 
     lookupBlob_path = `{container}/{blob}/_lookup.txt`;
-    changeBlob_path = `{container}/{blob}/changing`;
-    changeBlob_path_fromQueueTrigger = `{queueTrigger.containerName}/{queueTrigger.blobName}/changing`;
+
+    lookupTable_tableName = `blobaccess`;
+    lookupTable_partitionKey = `{container}/{blob}`;
+    lookupTable_rowKey = `lookup`;
+
+    changeTable_tableName = `blobaccess`;
+    changeTable_partitionKey = `{container}/{blob}`;
+    changeTable_rowKey = `change`;
+
+    changeTable_tableName_fromQueueTrigger = `blobaccess`;
+    changeTable_partitionKey_fromQueueTrigger = `{queueTrigger.containerName}/{queueTrigger.blobName}`;
+    changeTable_rowKey_fromQueueTrigger = `change`;
+
     dataRawBlob_path_fromQueueTrigger = `{queueTrigger.containerName}/{queueTrigger.blobName}`;
     dataDownloadBlob_path_fromQueueTriggerDate = `{queueTrigger.containerName}/{queueTrigger.blobName}/{queueTrigger.startTime}.gzip`;
 
@@ -117,7 +134,7 @@ export class Config<T> implements DataAccessConfig, DataUpdateConfig, FunctionTe
         return `${this.domain}/${this.apiRoutePath}/${key.containerName}/${key.blobName}`;
     }
 
-    getDataDownloadUrl(key: DataKey, lookup: LookupBlob): string {
+    getDataDownloadUrl(key: DataKey, lookup: LookupTable): string {
         return `${this.domain}/${this.blobProxyRoutePath}/${key.containerName}/${this.getDataDownloadBlobName(key.blobName, lookup)}`;
     }
 
@@ -125,7 +142,7 @@ export class Config<T> implements DataAccessConfig, DataUpdateConfig, FunctionTe
         return `${blobName}/_lookup.txt`;
     }
 
-    getDataDownloadBlobName(blobName: string, lookup: LookupBlob) {
+    getDataDownloadBlobName(blobName: string, lookup: LookupTable) {
         // TODO: Test if works with .ext and switch to underscore if needed
         return `${blobName}/${lookup.startTime}.gzip`;
     }
