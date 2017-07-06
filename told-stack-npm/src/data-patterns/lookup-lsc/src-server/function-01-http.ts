@@ -1,5 +1,5 @@
 import { DataUpdateConfig, DataKey, FunctionTemplateConfig, UpdateRequestQueueMessage, ChangeBlob, LookupBlob } from "../src-config/config";
-import { HttpFunctionResponse, HttpFunctionRequest } from "../../core/types/functions";
+import { HttpFunctionResponse, HttpFunctionRequest } from "../../../core/types/functions";
 
 // Http Request: Handle Update Request
 // Blob In: Read Old Lookup Blob Value

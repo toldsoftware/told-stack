@@ -1,5 +1,5 @@
 import { FunctionTemplateConfig, DataUpdateConfig, DataKey, UpdateRequestQueueMessage, ChangeBlob, LookupBlob, DataUpdateBlobConfig } from "../src-config/config";
-import { gzipText } from "../../core/utils/gzip";
+import { gzipText } from "../../../core/utils/gzip";
 
 // Queue Trigger: Update Request Queue
 // Blob Out: Changing Blob
