@@ -34,13 +34,15 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
             //     name: "outChangeBlob",
             //     type: "blob",
             //     direction: "out",
-            //     path: config.changeBlob_path_fromQueueTrigger
+            //     path: config.changeBlob_path_fromQueueTrigger,
+            //     connection: config.changeBlob_connection
             // },
             {
                 name: "outLookupBlob",
                 type: "blob",
                 direction: "out",
-                path: config.lookupBlob_path
+                path: config.lookupBlob_path,
+                connection: config.lookupBlob_connection,
             },
 
         ],
