@@ -10,11 +10,12 @@ export interface HttpFunction_Config {
 }
 
 export interface HttpFunction_BindingData {
-    key: string;
+    container: string;
+    blob: string;
 }
 
 export interface OutputBlobData {
-    key: string;
+    key: HttpFunction_BindingData;
     value: any;
 }
 
@@ -23,11 +24,11 @@ export class Config<T> implements HttpFunction_TemplateConfig, HttpFunction_Conf
         public http_routeRoot = 'api/http-to-queue',
         public default_storageConnectionString_AppSettingName = 'AZURE_STORAGE_CONNECTION_STRING') { }
 
-    http_route = this.http_routeRoot + '/{key}';
-    outputBlob_path = 'http-to-queue-output-queue';
+    http_route = this.http_routeRoot + '/{container}/{blob}';
+    outputBlob_path = '{container}/{blob}';
     outputBlob_connection = this.default_storageConnectionString_AppSettingName;
 
     getDataFromRequest(req: HttpFunctionRequest, bindingData: HttpFunction_BindingData) {
-        return { key: bindingData.key, value: req.body };
+        return { key: { container: bindingData.container, blob: bindingData.blob }, value: req.body };
     }
 }
