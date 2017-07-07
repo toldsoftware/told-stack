@@ -76,7 +76,7 @@ export async function runFunction(config: DataUpdateConfig, context: {
         outDataDownloadBlob: any,
     }
 }) {
-    context.log('START');
+    context.log('START', { inChangeTable: context.bindings.inChangeTable, insertionTime: context.bindingData.insertionTime });
 
     // BUG FIX: To Prevent inout RawDataBlob from crashing next step if it doesn't exist
     if (!context.bindings.inChangeTable) {
@@ -86,8 +86,8 @@ export async function runFunction(config: DataUpdateConfig, context: {
     }
 
     if (context.bindings.inChangeTable
-        && context.bindings.inChangeTable.startTime
-        && context.bindingData.insertionTime.getTime() < context.bindings.inChangeTable.startTime + config.timeExecutionSeconds * 1000) {
+        && context.bindings.inChangeTable.changeTime
+        && context.bindingData.insertionTime.getTime() < context.bindings.inChangeTable.changeTime + config.timeExecutionSeconds * 1000) {
         // The update is already executing, don't do anything
         context.log('DONE Already Executing Update');
         context.done();

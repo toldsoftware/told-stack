@@ -5,7 +5,7 @@ export interface DataKey {
     blobName: string;
 }
 
-export type LookupTable = { startTime: number };
+export type LookupTable = { timekey: string };
 
 export interface DataAccessConfig {
     timePollSeconds: number;
@@ -16,7 +16,7 @@ export interface DataAccessConfig {
 }
 
 export interface ChangeTable {
-    startTime: number;
+    changeTime: number;
 }
 
 export interface DataUpdateConfig {
@@ -76,7 +76,7 @@ export interface FunctionTemplateConfig {
 }
 
 export interface UpdateRequestQueueMessage extends DataKey {
-    startTime: string;
+    timekey: string;
 }
 
 export class Config<T> implements DataAccessConfig, DataUpdateConfig, FunctionTemplateConfig {
@@ -185,6 +185,6 @@ export class Config<T> implements DataAccessConfig, DataUpdateConfig, FunctionTe
 
     getDataDownloadBlobName(blobName: string, lookup: LookupTable) {
         // TODO: Test if works with .ext and switch to underscore if needed
-        return `${blobName}/${lookup.startTime}.gzip`;
+        return `${blobName}/${lookup.timekey}.gzip`;
     }
 }

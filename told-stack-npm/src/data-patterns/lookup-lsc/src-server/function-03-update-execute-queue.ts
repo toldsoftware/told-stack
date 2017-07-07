@@ -88,7 +88,8 @@ export async function runFunction(config: DataUpdateBlobConfig<any>, context: {
 
     context.log('Update Lookup Table');
     // context.bindings.outLookupTable = { startTime: context.bindings.inUpdateExecuteQueue.startTime };
-    context.bindings.outLookupTable = await insertOrMergeTableRow_sdk(config.getLookupTableRowKey_fromQueueTrigger(context.bindings.inUpdateExecuteQueue), context.bindings.inLookupTable, { startTime: context.bindings.inUpdateExecuteQueue.startTime });
+    context.bindings.outLookupTable = await insertOrMergeTableRow_sdk(config.getLookupTableRowKey_fromQueueTrigger(context.bindings.inUpdateExecuteQueue),
+        context.bindings.inLookupTable, { timekey: context.bindings.inUpdateExecuteQueue.timekey } as LookupTable);
 
     context.log('DONE');
     context.done();
