@@ -1,5 +1,6 @@
 import { HttpFunction_Config, HttpFunction_TemplateConfig, OutputTableData, HttpFunction_BindingData } from "../src-config/config";
 import { HttpFunctionResponse, HttpFunctionRequest } from "../../../core/types/functions";
+import { insertOrMergeTableRow } from "../../../core/utils/azure-storage-binding/table";
 
 // Http Request: Handle Update Request
 // Blob In: Read Old Lookup Blob Value
@@ -22,6 +23,15 @@ export function createFunctionJson(config: HttpFunction_TemplateConfig) {
                 direction: "out"
             },
             {
+                name: "inOutputTable",
+                type: "table",
+                direction: "in",
+                tableName: config.outputTable_tableName,
+                partitionKey: config.outputTable_partitionKey,
+                rowKey: config.outputTable_rowKey,
+                connection: config.outputTable_connection
+            },
+            {
                 name: "outOutputTable",
                 type: "table",
                 direction: "out",
@@ -41,11 +51,13 @@ export function runFunction(config: HttpFunction_Config, context: {
     res: HttpFunctionResponse,
     bindingData: HttpFunction_BindingData,
     bindings: {
+        inOutputTable: OutputTableData,
         outOutputTable: OutputTableData,
     }
 }, req: HttpFunctionRequest) {
     const data = config.getDataFromRequest(req, context.bindingData);
-    context.bindings.outOutputTable = data;
+    insertOrMergeTableRow(context.bindings.inOutputTable, context.bindings.outOutputTable, data);
+
     // context.log('The Data was Queued', data);
     context.res = {
         body: 'The Data was Stored in a Table'

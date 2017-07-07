@@ -20,7 +20,7 @@ export interface HttpFunction_BindingData {
 }
 
 export interface OutputTableData {
-    value: any;
+    [key: string]: any
 }
 
 export class Config<T> implements HttpFunction_TemplateConfig, HttpFunction_Config {
@@ -35,7 +35,8 @@ export class Config<T> implements HttpFunction_TemplateConfig, HttpFunction_Conf
     outputTable_rowKey = `{row}`;
     outputTable_connection = this.default_storageConnectionString_AppSettingName;
 
-    getDataFromRequest(req: HttpFunctionRequest, bindingData: HttpFunction_BindingData) {
-        return { value: req.body };
+    getDataFromRequest(req: HttpFunctionRequest, bindingData: HttpFunction_BindingData): OutputTableData {
+        // Allow controlling property names directly
+        return { ...req.body };
     }
 }
