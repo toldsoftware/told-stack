@@ -1,5 +1,6 @@
 import { FunctionTemplateConfig, DataUpdateConfig, DataKey, UpdateRequestQueueMessage, ChangeTable, LookupTable, DataUpdateBlobConfig } from "../src-config/config";
 import { gzipText } from "../../../core/utils/gzip";
+import { insertOrMergeTableRow_sdk } from "../../../core/utils/azure-storage-binding/tables-sdk";
 
 // Queue Trigger: Update Request Queue
 // Blob In-Out: Raw Data Blob
@@ -31,12 +32,21 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
                 connection: config.dataDownloadBlob_connection,
             },
             {
+                name: "inLookupTable",
+                type: "table",
+                direction: "ib",
+                tableName: config.lookupTable_tableName_fromQueueTrigger,
+                partitionKey: config.lookupTable_partitionKey_fromQueueTrigger,
+                rowKey: config.lookupTable_rowKey_fromQueueTrigger,
+                connection: config.lookupBlob_connection,
+            },
+            {
                 name: "outLookupTable",
-                type: "blob",
+                type: "table",
                 direction: "out",
-                tableName: config.lookupTable_tableName,
-                partitionKey: config.lookupTable_partitionKey,
-                rowKey: config.lookupTable_rowKey,
+                tableName: config.lookupTable_tableName_fromQueueTrigger,
+                partitionKey: config.lookupTable_partitionKey_fromQueueTrigger,
+                rowKey: config.lookupTable_rowKey_fromQueueTrigger,
                 connection: config.lookupBlob_connection,
             },
 
@@ -53,12 +63,15 @@ export async function runFunction(config: DataUpdateBlobConfig<any>, context: {
         inUpdateExecuteQueue: UpdateRequestQueueMessage,
         inoutRawDataBlob: any,
         outDataDownloadBlob: any,
+        inLookupTable: LookupTable,
         outLookupTable: LookupTable,
     }
 }) {
     const blobData = await config.obtainBlobData(context.bindings.inoutRawDataBlob, context.bindings.inUpdateExecuteQueue);
     context.bindings.inoutRawDataBlob = blobData;
     context.bindings.outDataDownloadBlob = await gzipText(JSON.stringify(blobData));
-    context.bindings.outLookupTable = { startTime: context.bindings.inUpdateExecuteQueue.startTime };
+    // context.bindings.outLookupTable = { startTime: context.bindings.inUpdateExecuteQueue.startTime };
+    context.bindings.outLookupTable = await insertOrMergeTableRow_sdk(config.getLookupTableRowKey_fromQueueTrigger(context.bindings.inUpdateExecuteQueue), context.bindings.inLookupTable, { startTime: context.bindings.inUpdateExecuteQueue.startTime });
+
     context.done();
 }

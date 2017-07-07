@@ -1,4 +1,5 @@
 import { FunctionTemplateConfig, DataUpdateConfig, DataKey, UpdateRequestQueueMessage, ChangeTable } from "../src-config/config";
+import { insertOrMergeTableRow_sdk } from "../../../core/utils/azure-storage-binding/tables-sdk";
 
 // Queue Trigger: Update Request Queue
 // Table In-Out: Changing Blob Singleton Check
@@ -15,9 +16,18 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
                 connection: config.updateRequestQueue_connection
             },
             {
-                name: "inoutChangeTable",
-                type: "blob",
-                direction: "inout",
+                name: "inChangeTable",
+                type: "table",
+                direction: "in",
+                tableName: config.changeTable_tableName_fromQueueTrigger,
+                partitionKey: config.changeTable_partitionKey_fromQueueTrigger,
+                rowKey: config.changeTable_rowKey_fromQueueTrigger,
+                connection: config.changeTable_connection
+            },
+            {
+                name: "outChangeTable",
+                type: "table",
+                direction: "out",
                 tableName: config.changeTable_tableName_fromQueueTrigger,
                 partitionKey: config.changeTable_partitionKey_fromQueueTrigger,
                 rowKey: config.changeTable_rowKey_fromQueueTrigger,
@@ -44,7 +54,7 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
     };
 }
 
-export function runFunction(config: DataUpdateConfig, context: {
+export async function runFunction(config: DataUpdateConfig, context: {
     log: typeof console.log,
     done: () => void,
     bindingData: {
@@ -52,26 +62,29 @@ export function runFunction(config: DataUpdateConfig, context: {
     },
     bindings: {
         inUpdateRequestQueue: UpdateRequestQueueMessage,
-        inoutChangeTable: ChangeTable,
+        inChangeTable: ChangeTable,
+        outChangeTable: ChangeTable,
         outUpdateExecuteQueue: UpdateRequestQueueMessage,
         outRawDataBlob: any,
     }
 }) {
     // BUG FIX: To Prevent inout RawDataBlob from crashing next step if it doesn't exist
-    if (!context.bindings.inoutChangeTable) {
+    if (!context.bindings.inChangeTable) {
         context.bindings.outRawDataBlob = {};
     }
 
-    if (context.bindings.inoutChangeTable
-        && context.bindings.inoutChangeTable.startTime
-        && context.bindingData.insertionTime.getTime() < context.bindings.inoutChangeTable.startTime + config.timeExecutionSeconds * 1000) {
+    if (context.bindings.inChangeTable
+        && context.bindings.inChangeTable.startTime
+        && context.bindingData.insertionTime.getTime() < context.bindings.inChangeTable.startTime + config.timeExecutionSeconds * 1000) {
         // The update is already executing, don't do anything
         context.done();
         return;
     }
 
     // Queue Execute Update
-    context.bindings.inoutChangeTable = { startTime: Date.now() };
+
+    // context.bindings.outChangeTable = { startTime: Date.now() };
+    context.bindings.outChangeTable = await insertOrMergeTableRow_sdk(config.getChangeTableRowKey_fromQueueTrigger(context.bindings.inUpdateRequestQueue), context.bindings.inChangeTable, { startTime: Date.now() });
     context.bindings.outUpdateExecuteQueue = context.bindings.inUpdateRequestQueue;
     context.done();
 }

@@ -1,6 +1,6 @@
 import { HttpFunction_Config, HttpFunction_TemplateConfig, OutputTableData, HttpFunction_BindingData } from "../src-config/config";
 import { HttpFunctionResponse, HttpFunctionRequest } from "../../../core/types/functions";
-import { insertOrMergeTableRow } from "../../../core/utils/azure-storage-binding/table";
+import { insertOrMergeTableRow } from "../../../core/utils/azure-storage-binding/tables";
 
 // Http Request: Handle Update Request
 // Blob In: Read Old Lookup Blob Value

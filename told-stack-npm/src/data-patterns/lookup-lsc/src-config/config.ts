@@ -29,6 +29,9 @@ export interface DataUpdateConfig {
     getDataDownloadBlobName(blobName: string, lookup: LookupTable): string;
 
     getKeyFromRequest(req: HttpFunctionRequest, bindingData: HttpFunction_BindingData): DataKey;
+
+    getChangeTableRowKey_fromQueueTrigger(queueTrigger: UpdateRequestQueueMessage): { table: string, partition: string, row: string };
+    getLookupTableRowKey_fromQueueTrigger(queueTrigger: UpdateRequestQueueMessage): { table: string, partition: string, row: string };
 }
 
 export interface HttpFunction_BindingData {
@@ -47,6 +50,9 @@ export interface FunctionTemplateConfig {
     lookupTable_tableName: string;
     lookupTable_partitionKey: string;
     lookupTable_rowKey: string;
+    lookupTable_tableName_fromQueueTrigger: string;
+    lookupTable_partitionKey_fromQueueTrigger: string;
+    lookupTable_rowKey_fromQueueTrigger: string;
 
     updateRequestQueue_connection: string;
     updateRequestQueue_queueName: string;
@@ -122,6 +128,24 @@ export class Config<T> implements DataAccessConfig, DataUpdateConfig, FunctionTe
     lookupTable_partitionKey = `{container}_{blob}`;
     lookupTable_rowKey = `lookup`;
 
+    lookupTable_tableName_fromQueueTrigger = `blobaccess`;
+    lookupTable_partitionKey_fromQueueTrigger = `{queueTrigger.containerName}_{queueTrigger.blobName}`;
+    lookupTable_rowKey_fromQueueTrigger = `lookup`;
+
+    getLookupTableRowKey_fromQueueTrigger(queueTrigger: UpdateRequestQueueMessage) {
+        return {
+            table: this.lookupTable_tableName_fromQueueTrigger
+                .replace(/{queueTrigger.containerName}/g, queueTrigger.containerName)
+                .replace(/{queueTrigger.blobName}/g, queueTrigger.blobName),
+            partition: this.lookupTable_partitionKey_fromQueueTrigger
+                .replace(/{queueTrigger.containerName}/g, queueTrigger.containerName)
+                .replace(/{queueTrigger.blobName}/g, queueTrigger.blobName),
+            row: this.lookupTable_rowKey_fromQueueTrigger
+                .replace(/{queueTrigger.containerName}/g, queueTrigger.containerName)
+                .replace(/{queueTrigger.blobName}/g, queueTrigger.blobName),
+        };
+    }
+
     changeTable_tableName = `blobaccess`;
     changeTable_partitionKey = `{container}_{blob}`;
     changeTable_rowKey = `change`;
@@ -129,6 +153,20 @@ export class Config<T> implements DataAccessConfig, DataUpdateConfig, FunctionTe
     changeTable_tableName_fromQueueTrigger = `blobaccess`;
     changeTable_partitionKey_fromQueueTrigger = `{queueTrigger.containerName}_{queueTrigger.blobName}`;
     changeTable_rowKey_fromQueueTrigger = `change`;
+
+    getChangeTableRowKey_fromQueueTrigger(queueTrigger: UpdateRequestQueueMessage) {
+        return {
+            table: this.changeTable_tableName_fromQueueTrigger
+                .replace(/{queueTrigger.containerName}/g, queueTrigger.containerName)
+                .replace(/{queueTrigger.blobName}/g, queueTrigger.blobName),
+            partition: this.changeTable_partitionKey_fromQueueTrigger
+                .replace(/{queueTrigger.containerName}/g, queueTrigger.containerName)
+                .replace(/{queueTrigger.blobName}/g, queueTrigger.blobName),
+            row: this.changeTable_rowKey_fromQueueTrigger
+                .replace(/{queueTrigger.containerName}/g, queueTrigger.containerName)
+                .replace(/{queueTrigger.blobName}/g, queueTrigger.blobName),
+        };
+    }
 
     dataRawBlob_path_fromQueueTrigger = `{queueTrigger.containerName}/{queueTrigger.blobName}`;
     dataDownloadBlob_path_fromQueueTriggerDate = `{queueTrigger.containerName}/{queueTrigger.blobName}/{queueTrigger.startTime}.gzip`;

@@ -1,6 +1,6 @@
 import { HttpFunction_Config, HttpFunction_TemplateConfig, OutputTableData, HttpFunction_BindingData } from "../src-config/config";
 import { HttpFunctionResponse, HttpFunctionRequest } from "../../../core/types/functions";
-import { saveRow } from "../../../core/utils/azure-storage-sdk/tables";
+import { insertOrMergeTableRow_sdk } from "../../../core/utils/azure-storage-binding/tables-sdk";
 
 // Http Request: Handle Update Request
 // Blob In: Read Old Lookup Blob Value
@@ -58,17 +58,7 @@ export async function runFunction(config: HttpFunction_Config, context: {
     const data = config.getDataFromRequest(req, context.bindingData);
 
     context.log('insertOrMergeTableRow', { inOutputTable: context.bindings.inOutputTable, outOutputTable: context.bindings.outOutputTable, data });
-    //context.bindings.outOutputTable = insertOrMergeTableRow(context.bindings.inOutputTable, data);
-    if (context.bindings.inOutputTable) {
-        // context.bindings.outOutputTable = context.bindings.inOutputTable;
-        // for (let k in data) {
-        //     context.bindings.outOutputTable[k] = data[k];
-        // }
-        await saveRow(context.bindingData.table, context.bindingData.partition, context.bindingData.row, data);
-    } else {
-        context.bindings.outOutputTable = data;
-    }
-
+    context.bindings.outOutputTable = await insertOrMergeTableRow_sdk(context.bindingData, context.bindings.inOutputTable, data);
 
     // context.log('The Data was Queued', data);
     context.res = {
