@@ -5,7 +5,9 @@ export interface DataKey {
     blobName: string;
 }
 
-export type LookupTable = { timekey: string };
+export interface LookupTable {
+    timeKey: string
+};
 
 export interface DataAccessConfig {
     timePollSeconds: number;
@@ -76,7 +78,7 @@ export interface FunctionTemplateConfig {
 }
 
 export interface UpdateRequestQueueMessage extends DataKey {
-    timekey: string;
+    timeKey: string;
 }
 
 export class Config<T> implements DataAccessConfig, DataUpdateConfig, FunctionTemplateConfig {
@@ -169,7 +171,7 @@ export class Config<T> implements DataAccessConfig, DataUpdateConfig, FunctionTe
     }
 
     dataRawBlob_path_fromQueueTrigger = `{containerName}/{blobName}`;
-    dataDownloadBlob_path_fromQueueTriggerDate = `{containerName}/{blobName}/{startTime}.gzip`;
+    dataDownloadBlob_path_fromQueueTriggerDate = `{containerName}/{blobName}/{timeKey}.gzip`;
 
     getLookupUrl(key: DataKey): string {
         return `${this.domain}/${this.apiRoutePath}/${key.containerName}/${key.blobName}`;
@@ -185,6 +187,6 @@ export class Config<T> implements DataAccessConfig, DataUpdateConfig, FunctionTe
 
     getDataDownloadBlobName(blobName: string, lookup: LookupTable) {
         // TODO: Test if works with .ext and switch to underscore if needed
-        return `${blobName}/${lookup.timekey}.gzip`;
+        return `${blobName}/${lookup.timeKey}.gzip`;
     }
 }

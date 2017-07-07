@@ -62,8 +62,8 @@ export async function runFunction(config: DataUpdateConfig, context: {
 
     // If the blob value is not stale
     // Return Current Blob Value with Long TTL
-    const remainingTtl = lookup && lookup.timekey
-        && (parseInt(lookup.timekey) + config.timeToLiveSeconds * 1000 - Date.now());
+    const remainingTtl = lookup && lookup.timeKey
+        && (parseInt(lookup.timeKey) + config.timeToLiveSeconds * 1000 - Date.now());
 
     if (remainingTtl > 0) {
 
@@ -80,7 +80,7 @@ export async function runFunction(config: DataUpdateConfig, context: {
     }
 
     // Set Update Request Queue
-    context.bindings.outUpdateRequestQueue = { ...dataKey, timekey: '' + Date.now() };
+    context.bindings.outUpdateRequestQueue = { ...dataKey, timeKey: '' + Date.now() };
 
     // Return Current Blob Value with Short TTL
 
