@@ -1,6 +1,6 @@
 import { DataUpdateConfig, DataKey, FunctionTemplateConfig, UpdateRequestQueueMessage, ChangeTable, LookupTable, HttpFunction_BindingData } from "../src-config/config";
 import { HttpFunctionResponse, HttpFunctionRequest } from "../../../core/types/functions";
-import { readBlob } from "../../../core/utils/azure-storage/blobs";
+import { readBlob } from "../../../core/utils/azure-storage-sdk/blobs";
 
 // Http Request: Handle Update Request
 // Table In: Read Old Lookup Blob Value

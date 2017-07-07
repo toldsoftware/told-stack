@@ -1,6 +1,6 @@
 import { HttpFunction_Config, HttpFunction_TemplateConfig, InputBlobData, HttpFunction_BindingData } from "../src-config/config";
 import { HttpFunctionResponse, HttpFunctionRequest } from "../../../core/types/functions";
-import { readBlob } from "../../../core/utils/azure-storage/blobs";
+import { readBlob } from "../../../core/utils/azure-storage-sdk/blobs";
 
 // Http Request: Handle Update Request
 // Blob In: Read Old Lookup Blob Value

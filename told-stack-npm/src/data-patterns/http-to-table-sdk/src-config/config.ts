@@ -25,7 +25,7 @@ export interface OutputTableData {
 
 export class Config<T> implements HttpFunction_TemplateConfig, HttpFunction_Config {
     constructor(
-        public http_routeRoot = 'api/http-to-table',
+        public http_routeRoot = 'api/http-to-table-sdk',
         public default_storageConnectionString_AppSettingName = 'AZURE_STORAGE_CONNECTION_STRING') { }
 
     http_route = this.http_routeRoot + '/{table}/{partition}/{row}';
