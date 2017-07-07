@@ -63,7 +63,9 @@ export async function runFunction(config: DataUpdateConfig, context: {
     // If the blob value is not stale
     // Return Current Blob Value with Long TTL
     const remainingTtl = lookup && lookup.timeKey
-        && (parseInt(lookup.timeKey) + config.timeToLiveSeconds * 1000 - Date.now());
+        && ((parseInt(lookup.timeKey) + config.timeToLiveSeconds * 1000 - Date.now()) / 1000);
+
+    context.log('remainingTtl', { remainingTtl, timeKey: lookup.timeKey, timeToLiveSeconds: config.timeToLiveSeconds, now: Date.now() });
 
     if (remainingTtl > 0) {
 
