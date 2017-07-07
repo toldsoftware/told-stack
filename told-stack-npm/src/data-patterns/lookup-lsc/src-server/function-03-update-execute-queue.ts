@@ -18,9 +18,16 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
                 connection: config.updateExecuteQueue_connection,
             },
             {
-                name: "inoutRawDataBlob",
+                name: "inRawDataBlob",
                 type: "blob",
-                direction: "inout",
+                direction: "in",
+                path: config.dataRawBlob_path_fromQueueTrigger,
+                connection: config.dataRawBlob_connection,
+            },
+            {
+                name: "outRawDataBlob",
+                type: "blob",
+                direction: "out",
                 path: config.dataRawBlob_path_fromQueueTrigger,
                 connection: config.dataRawBlob_connection,
             },
@@ -61,7 +68,8 @@ export async function runFunction(config: DataUpdateBlobConfig<any>, context: {
     bindingData: {},
     bindings: {
         inUpdateExecuteQueue: UpdateRequestQueueMessage,
-        inoutRawDataBlob: any,
+        inRawDataBlob: any,
+        outRawDataBlob: any,
         outDataDownloadBlob: any,
         inLookupTable: LookupTable,
         outLookupTable: LookupTable,
@@ -70,10 +78,10 @@ export async function runFunction(config: DataUpdateBlobConfig<any>, context: {
     context.log('START');
 
     context.log('Obtain New Data');
-    const blobData = await config.obtainBlobData(context.bindings.inoutRawDataBlob, context.bindings.inUpdateExecuteQueue);
+    const blobData = await config.obtainBlobData(context.bindings.inRawDataBlob, context.bindings.inUpdateExecuteQueue);
 
     context.log('Save New Data to Raw Blob');
-    context.bindings.inoutRawDataBlob = blobData;
+    context.bindings.outRawDataBlob = blobData;
 
     context.log('Gzip and Save New Data to Download Blob');
     context.bindings.outDataDownloadBlob = await gzipText(JSON.stringify(blobData));

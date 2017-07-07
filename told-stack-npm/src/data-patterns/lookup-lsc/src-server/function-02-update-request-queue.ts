@@ -80,8 +80,8 @@ export async function runFunction(config: DataUpdateConfig, context: {
 
     // BUG FIX: To Prevent inout RawDataBlob from crashing next step if it doesn't exist
     if (!context.bindings.inChangeTable) {
-        context.bindings.outRawDataBlob = {};
-        context.bindings.outDataDownloadBlob = {};
+        context.bindings.outRawDataBlob = { __empty: '' };
+        context.bindings.outDataDownloadBlob = { __empty: '' };
         context.log('Ensure RawDataBlob exists');
     }
 
