@@ -57,7 +57,7 @@ export async function runFunction(config: DataUpdateConfig, context: {
 
     const dataKey = config.getKeyFromRequest(req, context.bindingData);
     const lookup = context.bindings.inLookupTable;
-    
+
     context.log('Lookup', { lookup });
 
     // If the blob value is not stale
@@ -71,6 +71,7 @@ export async function runFunction(config: DataUpdateConfig, context: {
         context.res = {
             body: lookup,
             headers: {
+                'Content-Type': 'application/json',
                 'Cache-Control': `public, max-age=${remainingTtl}`
             }
         };
@@ -100,7 +101,8 @@ export async function runFunction(config: DataUpdateConfig, context: {
     context.res = {
         body: lookup,
         headers: {
-            'Cache-Control': `public, max-age=${config.timeExtendSeconds}`
+            'Content-Type': 'application/json',
+            'Cache-Control': `public, max-age=${config.timeExtendSeconds}`,
         }
     };
     context.done();
