@@ -63,11 +63,13 @@ export async function runFunction(config: DataUpdateConfig, context: {
     // If the blob value is not stale
     // Return Current Blob Value with Long TTL
     const remainingTtl = lookup && lookup.timeKey
-        && ((parseInt(lookup.timeKey) + config.timeToLiveSeconds * 1000 - Date.now()) / 1000);
+        && Math.ceil((parseInt(lookup.timeKey) + config.timeToLiveSeconds * 1000 - Date.now()) / 1000);
 
-    context.log('remainingTtl', { remainingTtl, timeKey: lookup.timeKey, timeToLiveSeconds: config.timeToLiveSeconds, now: Date.now() });
+    context.log('remainingTtl', { remainingTtl, timeKey: lookup, timeToLiveSeconds: config.timeToLiveSeconds, now: Date.now() });
 
-    if (remainingTtl > 0) {
+    if (remainingTtl > config.timeExtendSeconds) {
+
+        context.log('Return Old Lookup', { lookup, remainingTtl });
 
         // Return Old Lookup (Long TTL)
         context.res = {
@@ -77,9 +79,13 @@ export async function runFunction(config: DataUpdateConfig, context: {
                 'Cache-Control': `public, max-age=${remainingTtl}`
             }
         };
+
+        context.log('DONE');
         context.done();
         return;
     }
+
+    context.log('Request Update');
 
     // Set Update Request Queue
     context.bindings.outUpdateRequestQueue = { ...dataKey, timeKey: '' + Date.now() };
@@ -87,7 +93,9 @@ export async function runFunction(config: DataUpdateConfig, context: {
     // Return Current Blob Value with Short TTL
 
     if (!lookup) {
-        // Deal with missing lookup (First time request?)
+
+        context.log('Missing Lookup (First Time?)');
+
         context.res = {
             status: 400,
             body: `Not Ready Yet: Try again in ${config.timePollSeconds} Seconds`,
@@ -95,11 +103,15 @@ export async function runFunction(config: DataUpdateConfig, context: {
                 'Cache-Control': `public, max-age=${config.timeExtendSeconds}`
             }
         };
+
+        context.log('DONE');
         context.done();
         return;
     }
 
     // Return Old Lookup (Short)
+    context.log('Return Old Lookup with Short TTL while Getting New Lookup and Value');
+
     context.res = {
         body: lookup,
         headers: {
@@ -107,5 +119,7 @@ export async function runFunction(config: DataUpdateConfig, context: {
             'Cache-Control': `public, max-age=${config.timeExtendSeconds}`,
         }
     };
+
+    context.log('DONE');
     context.done();
 };
