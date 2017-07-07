@@ -34,7 +34,7 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
             {
                 name: "inLookupTable",
                 type: "table",
-                direction: "ib",
+                direction: "in",
                 tableName: config.lookupTable_tableName_fromQueueTrigger,
                 partitionKey: config.lookupTable_partitionKey_fromQueueTrigger,
                 rowKey: config.lookupTable_rowKey_fromQueueTrigger,

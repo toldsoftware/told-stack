@@ -135,14 +135,14 @@ export class Config<T> implements DataAccessConfig, DataUpdateConfig, FunctionTe
     getLookupTableRowKey_fromQueueTrigger(queueTrigger: UpdateRequestQueueMessage) {
         return {
             table: this.lookupTable_tableName_fromQueueTrigger
-                .replace(/{queueTrigger.containerName}/g, queueTrigger.containerName)
-                .replace(/{queueTrigger.blobName}/g, queueTrigger.blobName),
+                .replace(/\{queueTrigger\.containerName\}/g, queueTrigger.containerName)
+                .replace(/\{queueTrigger\.blobName\}/g, queueTrigger.blobName),
             partition: this.lookupTable_partitionKey_fromQueueTrigger
-                .replace(/{queueTrigger.containerName}/g, queueTrigger.containerName)
-                .replace(/{queueTrigger.blobName}/g, queueTrigger.blobName),
+                .replace(/\{queueTrigger\.containerName\}/g, queueTrigger.containerName)
+                .replace(/\{queueTrigger\.blobName\}/g, queueTrigger.blobName),
             row: this.lookupTable_rowKey_fromQueueTrigger
-                .replace(/{queueTrigger.containerName}/g, queueTrigger.containerName)
-                .replace(/{queueTrigger.blobName}/g, queueTrigger.blobName),
+                .replace(/\{queueTrigger\.containerName\}/g, queueTrigger.containerName)
+                .replace(/\{queueTrigger\.blobName\}/g, queueTrigger.blobName),
         };
     }
 
@@ -157,14 +157,14 @@ export class Config<T> implements DataAccessConfig, DataUpdateConfig, FunctionTe
     getChangeTableRowKey_fromQueueTrigger(queueTrigger: UpdateRequestQueueMessage) {
         return {
             table: this.changeTable_tableName_fromQueueTrigger
-                .replace(/{queueTrigger.containerName}/g, queueTrigger.containerName)
-                .replace(/{queueTrigger.blobName}/g, queueTrigger.blobName),
+                .replace(/\{queueTrigger\.containerName\}/g, queueTrigger.containerName)
+                .replace(/\{queueTrigger\.blobName\}/g, queueTrigger.blobName),
             partition: this.changeTable_partitionKey_fromQueueTrigger
-                .replace(/{queueTrigger.containerName}/g, queueTrigger.containerName)
-                .replace(/{queueTrigger.blobName}/g, queueTrigger.blobName),
+                .replace(/\{queueTrigger\.containerName\}/g, queueTrigger.containerName)
+                .replace(/\{queueTrigger\.blobName\}/g, queueTrigger.blobName),
             row: this.changeTable_rowKey_fromQueueTrigger
-                .replace(/{queueTrigger.containerName}/g, queueTrigger.containerName)
-                .replace(/{queueTrigger.blobName}/g, queueTrigger.blobName),
+                .replace(/\{queueTrigger\.containerName\}/g, queueTrigger.containerName)
+                .replace(/\{queueTrigger\.blobName\}/g, queueTrigger.blobName),
         };
     }
 
