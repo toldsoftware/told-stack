@@ -49,6 +49,13 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
                 path: config.dataRawBlob_path_fromQueueTrigger,
                 connection: config.dataRawBlob_connection,
             },
+            {
+                name: "outDataDownloadBlob",
+                type: "blob",
+                direction: "out",
+                path: config.dataDownloadBlob_path_fromQueueTriggerDate,
+                connection: config.dataDownloadBlob_connection,
+            },
         ],
         disabled: false
     };
@@ -66,6 +73,7 @@ export async function runFunction(config: DataUpdateConfig, context: {
         outChangeTable: ChangeTable,
         outUpdateExecuteQueue: UpdateRequestQueueMessage,
         outRawDataBlob: any,
+        outDataDownloadBlob: any,
     }
 }) {
     context.log('START');
@@ -73,6 +81,7 @@ export async function runFunction(config: DataUpdateConfig, context: {
     // BUG FIX: To Prevent inout RawDataBlob from crashing next step if it doesn't exist
     if (!context.bindings.inChangeTable) {
         context.bindings.outRawDataBlob = {};
+        context.bindings.outDataDownloadBlob = {};
         context.log('Ensure RawDataBlob exists');
     }
 
