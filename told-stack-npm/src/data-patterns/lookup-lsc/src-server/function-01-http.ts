@@ -97,7 +97,7 @@ export async function runFunction(config: DataUpdateConfig, context: {
         context.log('Missing Lookup (First Time?)');
 
         context.res = {
-            body: { error: 'Not Ready Yet: Try again in ${config.timePollSeconds} Seconds' },
+            body: { error: `Not Ready Yet: Try again in ${config.timePollSeconds} Seconds` },
             headers: {
                 'Content-Type': 'application/json',
                 'Cache-Control': `public, max-age=${config.timeExtendSeconds}`,
