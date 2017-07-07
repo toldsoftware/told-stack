@@ -83,11 +83,11 @@ export interface UpdateRequestQueueMessage extends DataKey {
 
 export class Config<T> implements DataAccessConfig, DataUpdateConfig, FunctionTemplateConfig {
     timeToLiveSeconds = 60;
-    timeExtendSeconds = 10;
+    timeExtendSeconds = 1;
     timeExecutionSeconds = 10;
 
-    timePollSeconds = 15;
-    maxPollCount = 3;
+    timePollSeconds = 1;
+    maxPollCount = 5;
 
     domain = '/';
     blobProxyRoutePath = 'blob';

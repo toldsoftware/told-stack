@@ -1,5 +1,6 @@
 import fetch from 'node-fetch';
 import { DataAccessConfig, DataKey, LookupTable } from "../src-config/config";
+import { setInterval_exponentialBackoff, clearInterval_exponentialBackoff } from "../../../core/utils/time";
 
 export class DataAccess {
     constructor(private config: DataAccessConfig) { }
@@ -30,21 +31,16 @@ export async function readAppBlobAndUpdate<T>(config: DataAccessConfig, key: Dat
     const { data, lookup } = await readAppBlob_inner<T>(config, key);
 
     if (notifyUpdate) {
-        let intervalCount = 0;
-        const intervalId = setInterval(async () => {
-            intervalCount++;
-            if (intervalCount > config.maxPollCount) {
-                clearInterval(intervalId);
-            }
 
+        const intervalId = setInterval_exponentialBackoff(async () => {
             const rLookup_update = await fetch(config.getLookupUrl(key));
             const lName_update = await rLookup_update.json() as LookupTable;
 
             if (JSON.stringify(lName_update) !== JSON.stringify(lookup)) {
-                clearInterval(intervalId);
+                clearInterval_exponentialBackoff(intervalId);
                 notifyUpdate();
             }
-        }, config.timePollSeconds * 1000);
+        }, config.timePollSeconds * 1000, config.maxPollCount);
 
     }
 
