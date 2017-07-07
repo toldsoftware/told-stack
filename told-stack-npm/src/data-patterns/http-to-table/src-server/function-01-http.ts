@@ -56,7 +56,9 @@ export function runFunction(config: HttpFunction_Config, context: {
     }
 }, req: HttpFunctionRequest) {
     const data = config.getDataFromRequest(req, context.bindingData);
-    insertOrMergeTableRow(context.bindings.inOutputTable, context.bindings.outOutputTable, data);
+
+    context.log('insertOrMergeTableRow', { inOutputTable: context.bindings.inOutputTable, outOutputTable: context.bindings.outOutputTable, data });
+    context.bindings.outOutputTable = insertOrMergeTableRow(context.bindings.inOutputTable, data);
 
     // context.log('The Data was Queued', data);
     context.res = {

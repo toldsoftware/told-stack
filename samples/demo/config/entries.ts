@@ -18,5 +18,5 @@ export const entries: EntryInfo[] = [
     { name: 'http-input-blob', import: '@told/stack/lib/data-patterns/http-input-blob/src-server/function-01-http', configImport: './config-http-input-blob' },
     { name: 'http-input-blob-sdk', import: '@told/stack/lib/data-patterns/http-input-blob-sdk/src-server/function-01-http', configImport: './config-http-input-blob-sdk' },
     { name: 'http-input-table', import: '@told/stack/lib/data-patterns/http-input-table/src-server/function-01-http', configImport: './config-http-input-table' },
-    
+
 ];
