@@ -85,9 +85,15 @@ export async function runFunction(config: DataUpdateConfig, context: {
         context.log('Ensure RawDataBlob exists');
     }
 
-    if (context.bindings.inChangeTable
-        && context.bindings.inChangeTable.changeTime
-        && context.bindingData.insertionTime.getTime() < context.bindings.inChangeTable.changeTime + config.timeExecutionSeconds * 1000) {
+    const changeTime = context.bindings.inChangeTable
+        && context.bindings.inChangeTable.changeTime;
+
+    const remainingTimeToFinish = changeTime
+        && (changeTime + config.timeExecutionSeconds * 1000 - Date.now());
+
+    context.log('remainingTimeToFinish', { remainingTimeToFinish });
+
+    if (remainingTimeToFinish > 0) {
         // The update is already executing, don't do anything
         context.log('DONE Already Executing Update');
         context.done();
