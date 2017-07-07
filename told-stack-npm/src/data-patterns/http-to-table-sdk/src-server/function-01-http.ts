@@ -62,7 +62,10 @@ export async function runFunction(config: HttpFunction_Config, context: {
 
     // context.log('The Data was Queued', data);
     context.res = {
-        body: 'The Data was Stored in a Table'
+        body: 'The Data was Stored in a Table',
+        headers: {
+            'Content-Type': 'text/plain'
+        }
     };
     context.done();
 };

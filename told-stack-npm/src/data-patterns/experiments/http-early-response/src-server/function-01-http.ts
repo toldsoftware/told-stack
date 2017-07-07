@@ -1,5 +1,5 @@
 import { HttpFunction_Config, HttpFunction_TemplateConfig, OutputQueueData, HttpFunction_BindingData } from "../src-config/config";
-import { HttpFunctionResponse, HttpFunctionRequest } from "../../../core/types/functions";
+import { HttpFunctionResponse, HttpFunctionRequest } from "../../../../core/types/functions";
 
 // Http Request: Handle Update Request
 // Blob In: Read Old Lookup Blob Value
@@ -42,14 +42,29 @@ export function runFunction(config: HttpFunction_Config, context: {
         outOutputQueue: OutputQueueData,
     }
 }, req: HttpFunctionRequest) {
-    const data = config.getDataFromRequest(req, context.bindingData);
-    context.bindings.outOutputQueue = data;
-    // context.log('The Data was Queued', data);
+    context.log('START Immediate Response');
     context.res = {
-        body: 'The Data was Queued',
+        body: 'The Data will be Queued',
         headers: {
             'Content-Type': 'text/plain'
         }
     };
-    context.done();
+    
+    // EXPERIMENT: Will the response be sent before the done call?
+    // Wait 5 Seconds before marking done
+    // Test how quickly the response is received.
+
+    // RESULT: The response is not processed until context.done() is called
+
+    context.log('Wait 5 Seconds');
+
+    setTimeout(() => {
+        context.log('Queue Message');
+
+        const data = config.getDataFromRequest(req, context.bindingData);
+        context.bindings.outOutputQueue = data;
+
+        context.log('DONE');
+        context.done();
+    }, 5000);
 };

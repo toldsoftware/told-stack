@@ -8,3 +8,4 @@ __generated__
 
 # Ignore Launch Settings (which could include sensitive settings for testing)
 .vscode/launch.json
+local.settings.json
