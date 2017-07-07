@@ -3,7 +3,7 @@ export function insertOrMergeTableRow(table_in: any, data: any) {
         for (let k in data) {
             table_in[k] = data[k];
         }
-        return undefined;
+        return table_in;
     } else {
         return data;
     }
