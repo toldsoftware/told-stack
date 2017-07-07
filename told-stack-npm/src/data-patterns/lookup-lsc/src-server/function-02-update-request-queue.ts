@@ -68,23 +68,30 @@ export async function runFunction(config: DataUpdateConfig, context: {
         outRawDataBlob: any,
     }
 }) {
+    context.log('START');
+
     // BUG FIX: To Prevent inout RawDataBlob from crashing next step if it doesn't exist
     if (!context.bindings.inChangeTable) {
         context.bindings.outRawDataBlob = {};
+        context.log('Ensure RawDataBlob exists');
     }
 
     if (context.bindings.inChangeTable
         && context.bindings.inChangeTable.startTime
         && context.bindingData.insertionTime.getTime() < context.bindings.inChangeTable.startTime + config.timeExecutionSeconds * 1000) {
         // The update is already executing, don't do anything
+        context.log('DONE Already Executing Update');
         context.done();
         return;
     }
 
     // Queue Execute Update
+    context.log('Execute Update');
 
     // context.bindings.outChangeTable = { startTime: Date.now() };
     context.bindings.outChangeTable = await insertOrMergeTableRow_sdk(config.getChangeTableRowKey_fromQueueTrigger(context.bindings.inUpdateRequestQueue), context.bindings.inChangeTable, { startTime: Date.now() });
     context.bindings.outUpdateExecuteQueue = context.bindings.inUpdateRequestQueue;
+
+    context.log('DONE');
     context.done();
 }
