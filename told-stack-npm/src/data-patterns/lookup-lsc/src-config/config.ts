@@ -76,7 +76,7 @@ export interface FunctionTemplateConfig {
 }
 
 export interface UpdateRequestQueueMessage extends DataKey {
-    startTime: number;
+    startTime: string;
 }
 
 export class Config<T> implements DataAccessConfig, DataUpdateConfig, FunctionTemplateConfig {

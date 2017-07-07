@@ -80,7 +80,7 @@ export async function runFunction(config: DataUpdateConfig, context: {
     }
 
     // Set Update Request Queue
-    context.bindings.outUpdateRequestQueue = { ...dataKey, startTime: Date.now() };
+    context.bindings.outUpdateRequestQueue = { ...dataKey, startTime: '' + Date.now() };
 
     // Return Current Blob Value with Short TTL
 
