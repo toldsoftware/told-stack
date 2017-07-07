@@ -6,6 +6,19 @@ Monorepo for Feature Oriented Modules
 
 `npm @told/stack`
 
+## Commands
+
+- Build Main Package Code
+    - Inside `told-stack-npm`
+    - `tsc -w`
+- Build Demo
+    - Inside `samples/demo`
+    - `npm start`
+- Run Functions Locally
+    - Inside `samples/demo/_deploy`
+    - `func host start`
+
+
 ## Structure
 
 - Each Folder is a module
