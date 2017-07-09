@@ -34,7 +34,7 @@ export function runFunction(config: HttpFunction_Config, context: {
     bindings: {
     }
 }, req: HttpFunctionRequest) {
-    console.log('START');
+    context.log('START');
 
     const data = config.getDataFromRequest(req, context.bindingData);
     context.res = {
@@ -44,6 +44,6 @@ export function runFunction(config: HttpFunction_Config, context: {
         }
     };
 
-    console.log('DONE');
+    context.log('DONE');
     context.done();
 };

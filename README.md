@@ -6,7 +6,7 @@ Monorepo for Feature Oriented Modules
 
 `npm @told/stack`
 
-## Commands
+## Cli Commands
 
 - Build Main Package Code
     - Inside `told-stack-npm`

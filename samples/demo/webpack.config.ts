@@ -19,8 +19,9 @@ const config: webpack.Configuration = {
         path: `${__dirname}/`,
         filename: '[name]',
         // No Sourcemap
-        sourceMapFilename: ''
+        // sourceMapFilename: ''
     },
+    devtool: 'source-map',
     plugins: [
         new webpack.optimize.ModuleConcatenationPlugin()
     ],
@@ -37,6 +38,7 @@ const config: webpack.Configuration = {
         loaders: [
             // All files with a '.ts' or '.tsx' extension will be handled by 'awesome-typescript-loader'.
             { test: /\.tsx?$/, loader: 'awesome-typescript-loader' },
+            { test: /\.js$/, use: ["source-map-loader"], enforce: "pre" },
         ]
     },
 };
