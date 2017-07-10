@@ -1,4 +1,4 @@
-import { ServerConfig, FunctionTemplateConfig, HttpFunction_BindingData, HttpFunction_DownloadBlob_BindingData } from "../src-config/server-config";
+import { FunctionTemplateConfig, HttpFunction_BindingData, HttpFunction_DownloadBlob_BindingData, ServerConfigType } from "../src-config/server-config";
 import { HttpFunctionRequest, HttpFunctionResponse } from "../../../core/types/functions";
 import { readBlobBuffer } from "../../../core/utils/azure-storage-sdk/blobs";
 
@@ -22,7 +22,7 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
     };
 }
 
-export async function runFunction(config: ServerConfig, context: {
+export async function runFunction(config: ServerConfigType, context: {
     log: typeof console.log,
     done: () => void,
     res: HttpFunctionResponse,
@@ -37,7 +37,7 @@ export async function runFunction(config: ServerConfig, context: {
         headers: {
             'Content-Type': 'application/json',
             'Content-Encoding': config.shouldGzip ? 'gzip' : undefined,
-            'Cache-Control': 'public, max-age=' + (config.timeToLiveSeconds * 4),
+            'Cache-Control': `public, max-age=${config.timeToLiveSeconds_downloadBlob}`,
         }
     };
     context.done();

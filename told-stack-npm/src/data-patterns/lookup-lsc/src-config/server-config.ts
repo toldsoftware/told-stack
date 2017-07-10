@@ -8,6 +8,7 @@ export interface ChangeData {
 
 export interface ServerConfigType {
     timeToLiveSeconds: number;
+    timeToLiveSeconds_downloadBlob: number;
     timeExtendSeconds: number;
     timeExecutionSeconds: number;
     timePollSeconds: number;
@@ -76,6 +77,7 @@ export interface UpdateRequestQueueMessage extends DataKey {
 
 export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
     timeToLiveSeconds = 60;
+    get timeToLiveSeconds_downloadBlob() { return this.timeToLiveSeconds * 4 + 300; }
     timeExtendSeconds = 1;
     timeExecutionSeconds = 10;
     timePollSeconds = this.clientConfig.timePollSeconds;

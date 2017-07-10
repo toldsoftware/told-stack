@@ -14,7 +14,8 @@ export class LookupLscTest extends RX.Component<{}, {
         } as any);
 
         // Infinite Update Loop
-        setTimeout(this.download, 15 * 1000);
+        // setTimeout(this.download, 1 * 1000);
+        setTimeout(this.download);
     }
 
     download = async () => {

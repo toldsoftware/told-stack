@@ -1,4 +1,4 @@
-import { ServerConfig, DataKey, FunctionTemplateConfig, UpdateRequestQueueMessage, ChangeData, LookupData, HttpFunction_BindingData } from "../src-config/server-config";
+import { ServerConfigType, DataKey, FunctionTemplateConfig, UpdateRequestQueueMessage, ChangeData, LookupData, HttpFunction_BindingData } from "../src-config/server-config";
 import { HttpFunctionResponse, HttpFunctionRequest } from "../../../core/types/functions";
 import { readBlob } from "../../../core/utils/azure-storage-sdk/blobs";
 
@@ -43,7 +43,7 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
     };
 }
 
-export async function runFunction(config: ServerConfig, context: {
+export async function runFunction(config: ServerConfigType, context: {
     log: typeof console.log,
     done: () => void,
     res: HttpFunctionResponse,

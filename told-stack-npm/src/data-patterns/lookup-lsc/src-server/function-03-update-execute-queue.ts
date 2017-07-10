@@ -95,7 +95,7 @@ export async function runFunction(config: ServerConfigType, context: {
     const downloadBlobName = config.getDataDownloadBlobName_from_queueMessage(context.bindings.inUpdateExecuteQueue);
     await writeBlobBuffer(containerName, downloadBlobName, downloadData, {
         contentSettings: {
-            cacheControl: `public, max-age=${config.timeToLiveSeconds * 4}`,
+            cacheControl: `public, max-age=${config.timeToLiveSeconds_downloadBlob}`,
             contentEncoding: config.shouldGzip ? 'gzip' : undefined,
             contentType: 'application/json',
         }
