@@ -15,7 +15,7 @@ export interface ServerConfigType {
     shouldGzip: boolean;
 
     getDataDownloadBlobName(blobName: string, lookup: LookupData): string;
-
+    getDataDownloadBlobName_from_queueMessage(message: UpdateRequestQueueMessage): string;
     getKeyFromRequest(req: HttpFunctionRequest, bindingData: HttpFunction_BindingData): DataKey;
 
     getChangeTableRowKey_fromQueueTrigger(queueTrigger: UpdateRequestQueueMessage): { table: string, partition: string, row: string };
@@ -27,6 +27,12 @@ export interface ServerConfigType {
 export interface HttpFunction_BindingData {
     containerName: string;
     blobName: string;
+}
+
+export interface HttpFunction_DownloadBlob_BindingData {
+    containerName: string;
+    blobName: string;
+    timeKeyWithGzip: string;
 }
 
 export interface FunctionTemplateConfig {
@@ -58,7 +64,7 @@ export interface FunctionTemplateConfig {
     dataRawBlob_path_fromQueueTrigger: string;
 
     dataDownloadBlob_connection: string;
-    dataDownloadBlob_path_from_queueTriggerDate: string;
+    dataDownloadBlob_path_from_queueTrigger: string;
 
     http_dataDownload_route: string;
     dataDownloadBlob_path_from_http_dataDownload_route: string;
@@ -88,10 +94,14 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
     http_route = this.clientConfig.lookup_route + '/{containerName}/{blobName}';
     getDataDownloadBlobName = this.clientConfig.getDataDownloadBlobName;
     dataRawBlob_path_fromQueueTrigger = `{containerName}/{blobName}`;
-    dataDownloadBlob_path_from_queueTriggerDate = `{containerName}/{blobName}/{timeKey}${this.shouldGzip ? '_gzip' : ''}`;
+    dataDownloadBlob_path_from_queueTrigger = `{containerName}/{blobName}/{timeKey}${this.shouldGzip ? '_gzip' : ''}`;
 
-    http_dataDownload_route = this.clientConfig.downloadBlob_route + '/{containerName}/{blobName}/{timeKey}';
-    dataDownloadBlob_path_from_http_dataDownload_route = `{containerName}/{blobName}/{timeKey}${this.shouldGzip ? '_gzip' : ''}`;
+    getDataDownloadBlobName_from_queueMessage(message: UpdateRequestQueueMessage) {
+        return `${message.blobName}/${message.timeKey}${this.shouldGzip ? '_gzip' : ''}`;
+    }
+
+    http_dataDownload_route = this.clientConfig.downloadBlob_route + '/{containerName}/{blobName}/{timeKeyWithGzip}';
+    dataDownloadBlob_path_from_http_dataDownload_route = `{containerName}/{blobName}/{timeKeyWithGzip}`;
 
     constructor(
         private clientConfig: ClientConfig,

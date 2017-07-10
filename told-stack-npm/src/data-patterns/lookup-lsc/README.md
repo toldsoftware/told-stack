@@ -14,3 +14,10 @@
     - Clients Continue to Get Old Data for 5 sec from CDN, while new data is obtained
 - Process Update Request 
 - Update Lookup File with new Path and Stale TTL
+
+## Notes
+
+- Gzip is disabled and is not needed since:
+    - A function is used to read blobs and send to the CDN instead of giving direct access to the blob or using a proxy
+    - Gzip costs more CPU and only save Blob Storage costs
+    - The Function will gzip automatically before sending to client

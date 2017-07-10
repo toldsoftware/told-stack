@@ -4,14 +4,17 @@ import { lookupLscDataAccess } from "../server-access/lookup-lsc-data-access";
 
 export class LookupLscTest extends RX.Component<{}, {
     hasStarted: boolean,
-    isDownloading: boolean,
+    isWaitingForUpdate: boolean,
     obj: any,
 }>{
 
     notifyUpdate = () => {
         this.setState({
-            isDownloading: false,
+            isWaitingForUpdate: false,
         } as any);
+
+        // Infinite Update Loop
+        setTimeout(this.download, 15 * 1000);
     }
 
     download = async () => {
@@ -19,7 +22,7 @@ export class LookupLscTest extends RX.Component<{}, {
 
         this.setState({
             hasStarted: true,
-            isDownloading: true,
+            isWaitingForUpdate: true,
             obj
         });
     }
@@ -37,7 +40,7 @@ export class LookupLscTest extends RX.Component<{}, {
         return (
             <RX.View>
                 <RX.Text>hasStarted: {'' + this.state.hasStarted}</RX.Text>
-                <RX.Text>isDownloading: {'' + this.state.isDownloading}</RX.Text>
+                <RX.Text>isWaitingForUpdate: {'' + this.state.isWaitingForUpdate}</RX.Text>
                 <RX.Text>{JSON.stringify(this.state.obj)}</RX.Text>
             </RX.View>
         );

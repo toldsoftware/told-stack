@@ -6,4 +6,3 @@ export const clientConfig = new ClientConfig({
     downloadBlob_domain: 'https://told-stack-demo.azurewebsites.net',
     downloadBlob_route: 'api/lookup-lsc-download'
 });
-

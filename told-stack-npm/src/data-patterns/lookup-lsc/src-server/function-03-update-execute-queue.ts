@@ -1,6 +1,7 @@
-import { FunctionTemplateConfig, ServerConfigType, DataKey, UpdateRequestQueueMessage, ChangeData, LookupData} from "../src-config/server-config";
+import { FunctionTemplateConfig, ServerConfigType, DataKey, UpdateRequestQueueMessage, ChangeData, LookupData } from "../src-config/server-config";
 import { gzipText } from "../../../core/utils/gzip";
 import { insertOrMergeTableRow_sdk } from "../../../core/utils/azure-storage-binding/tables-sdk";
+import { writeBlobBuffer } from "../../../core/utils/azure-storage-sdk/blobs";
 
 // Queue Trigger: Update Request Queue
 // Blob In-Out: Raw Data Blob
@@ -31,13 +32,13 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
                 path: config.dataRawBlob_path_fromQueueTrigger,
                 connection: config.dataRawBlob_connection,
             },
-            {
-                name: "outDataDownloadBlob",
-                type: "blob",
-                direction: "out",
-                path: config.dataDownloadBlob_path_from_queueTriggerDate,
-                connection: config.dataDownloadBlob_connection,
-            },
+            // {
+            //     name: "outDataDownloadBlob",
+            //     type: "blob",
+            //     direction: "out",
+            //     path: config.dataDownloadBlob_path_from_queueTriggerDate,
+            //     connection: config.dataDownloadBlob_connection,
+            // },
             {
                 name: "inLookupTable",
                 type: "table",
@@ -87,7 +88,18 @@ export async function runFunction(config: ServerConfigType, context: {
     // 'Content-Type': 'application/json',
     // 'Cache-Control': `public, max-age=${config.timeCacheControlSeconds_downloadBlob||4*StaleTimeout?}`,
     context.log('Gzip and Save New Data to Download Blob');
-    context.bindings.outDataDownloadBlob = await gzipText(JSON.stringify(blobData));
+
+    const downloadData = config.shouldGzip ? await gzipText(JSON.stringify(blobData)) : JSON.stringify(blobData);
+    // context.bindings.outDataDownloadBlob = downloadData;
+    const containerName = context.bindings.inUpdateExecuteQueue.containerName;
+    const downloadBlobName = config.getDataDownloadBlobName_from_queueMessage(context.bindings.inUpdateExecuteQueue);
+    await writeBlobBuffer(containerName, downloadBlobName, downloadData, {
+        contentSettings: {
+            cacheControl: `public, max-age=${config.timeToLiveSeconds * 4}`,
+            contentEncoding: config.shouldGzip ? 'gzip' : undefined,
+            contentType: 'application/json',
+        }
+    });
 
     context.log('Update Lookup Table');
     // context.bindings.outLookupTable = { startTime: context.bindings.inUpdateExecuteQueue.startTime };

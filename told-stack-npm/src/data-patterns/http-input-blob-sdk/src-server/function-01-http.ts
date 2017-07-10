@@ -43,12 +43,17 @@ export async function runFunction(config: HttpFunction_Config, context: {
         // inInputBlob: InputBlobData,
     }
 }, req: HttpFunctionRequest) {
+    context.log('http-input-blob-sdk START');
+    
     // const data = context.bindings.inInputBlob;
     const data = await readBlob<InputBlobData>(context.bindingData.container, context.bindingData.blob);
+    context.log('http-input-blob-sdk', data);
     context.res = {
         body: data,
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': config.responseOptions.contentType || 'application/json',
+            'Content-Encoding': config.responseOptions.contentEncoding || undefined,
+            'Cache-Control': config.responseOptions.cacheControl || undefined,
         }
     };
     context.done();

@@ -1,21 +1,44 @@
-import { createFunctionJson as createFunctionJson_inner, runFunction as runFunction_inner } from "../../http-input-blob/src-server/function-01-http";
-import { ServerConfig, FunctionTemplateConfig } from "../src-config/server-config";
-import { HttpFunctionRequest } from "../../../core/types/functions";
+import { ServerConfig, FunctionTemplateConfig, HttpFunction_BindingData, HttpFunction_DownloadBlob_BindingData } from "../src-config/server-config";
+import { HttpFunctionRequest, HttpFunctionResponse } from "../../../core/types/functions";
+import { readBlobBuffer } from "../../../core/utils/azure-storage-sdk/blobs";
 
 export function createFunctionJson(config: FunctionTemplateConfig) {
-    return createFunctionJson_inner({
-        http_route: config.http_dataDownload_route,
-        inputBlob_connection: config.dataDownloadBlob_connection,
-        inputBlob_path: config.dataDownloadBlob_path_from_http_dataDownload_route,
-    });
+    return {
+        bindings: [
+            {
+                name: "req",
+                type: "httpTrigger",
+                direction: "in",
+                authLevel: "anonymous",
+                route: config.http_dataDownload_route
+            },
+            {
+                name: "res",
+                type: "http",
+                direction: "out"
+            },
+        ],
+        disabled: false
+    };
 }
 
-export async function runFunction(config: ServerConfig, context: any, req: HttpFunctionRequest) {
-    return runFunction_inner({
-        responseOptions: {
-            cacheControl: 'public, max-age=' + (config.timeToLiveSeconds * 4),
-            contentEncoding: config.shouldGzip ? 'gzip' : undefined,
-            contentType: 'application/json',
+export async function runFunction(config: ServerConfig, context: {
+    log: typeof console.log,
+    done: () => void,
+    res: HttpFunctionResponse,
+    bindingData: HttpFunction_DownloadBlob_BindingData,
+    bindings: {}
+}, req: HttpFunctionRequest) {
+    context.log('http-download-blob START');
+    const data = await readBlobBuffer<any>(context.bindingData.containerName, context.bindingData.blobName + '/' + context.bindingData.timeKeyWithGzip);
+    context.log('http-download-blob', data);
+    context.res = {
+        body: data,
+        headers: {
+            'Content-Type': 'application/json',
+            'Content-Encoding': config.shouldGzip ? 'gzip' : undefined,
+            'Cache-Control': 'public, max-age=' + (config.timeToLiveSeconds * 4),
         }
-    }, context, req);
+    };
+    context.done();
 };

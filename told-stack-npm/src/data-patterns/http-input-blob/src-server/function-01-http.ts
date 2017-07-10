@@ -43,6 +43,7 @@ export function runFunction(config: HttpFunction_Config, context: {
     }
 }, req: HttpFunctionRequest) {
     const data = context.bindings.inInputBlob;
+    context.log('http-input-blob', data);
     context.res = {
         body: data,
         headers: {

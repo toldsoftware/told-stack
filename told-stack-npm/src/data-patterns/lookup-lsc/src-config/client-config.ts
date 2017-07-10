@@ -35,6 +35,9 @@ export class ClientConfig implements ClientConfigType, ClientConfigOptions {
     downloadBlob_domain = '/';
     downloadBlob_route = 'blob';
 
+    // WARNING: Gzip is not working in the 4th step: Reading from .gzip blob with node and sending to client
+    // In addition, since using a function instead of proxy, gzip is done automatically by the function
+    // So it is not needed, and would only be useful to reduce storage size at the cost of increased processing
     shouldGzipDownloadBlob = false;
 
     constructor(options?: Partial<ClientConfigOptions>) {
