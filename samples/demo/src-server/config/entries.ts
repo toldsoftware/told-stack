@@ -11,7 +11,7 @@ export const entries: EntryInfo[] = [
     { name: 'http-to-blob', import: '@told/stack/src/data-patterns/http-to-blob/src-server/function-01-http', configImport: './config-http-to-blob' },
     { name: 'http-to-table', import: '@told/stack/src/data-patterns/http-to-table/src-server/function-01-http', configImport: './config-http-to-table' },
     { name: 'http-to-table-sdk', import: '@told/stack/src/data-patterns/http-to-table-sdk/src-server/function-01-http', configImport: './config-http-to-table-sdk' },
-    
+
     { name: 'http-input-blob', import: '@told/stack/src/data-patterns/http-input-blob/src-server/function-01-http', configImport: './config-http-input-blob' },
     { name: 'http-input-blob-sdk', import: '@told/stack/src/data-patterns/http-input-blob-sdk/src-server/function-01-http', configImport: './config-http-input-blob-sdk' },
     { name: 'http-input-table', import: '@told/stack/src/data-patterns/http-input-table/src-server/function-01-http', configImport: './config-http-input-table' },
