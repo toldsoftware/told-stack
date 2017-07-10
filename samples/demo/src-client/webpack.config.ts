@@ -27,7 +27,7 @@ const enablePreact = true;
 // const hostPath = __dirname + '/../_deploy/static/app';
 // const buildPath = hostPath + '/dist';
 const hostPath = __dirname + '/../_deploy';
-const buildPath = hostPath + '/static/app/dist';
+const buildPath = hostPath + '/static/demo/dist';
 
 const plugins = [];
 
@@ -45,7 +45,7 @@ if (enableCodeSplitting) {
         new webpack.optimize.CommonsChunkPlugin({
             name: 'vendor',
             filename: 'vendor.bundle.js',
-            path: buildPath,
+            // path: buildPath,
             minChunks(module: any, count: any) {
                 var context = module.context;
                 return context && context.indexOf('node_modules') >= 0;
