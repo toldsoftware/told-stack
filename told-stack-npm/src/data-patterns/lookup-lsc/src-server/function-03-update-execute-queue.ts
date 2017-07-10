@@ -1,4 +1,4 @@
-import { FunctionTemplateConfig, DataUpdateConfig, DataKey, UpdateRequestQueueMessage, ChangeTable, LookupTable, DataUpdateBlobConfig } from "../src-config/config";
+import { FunctionTemplateConfig, ServerConfigType, DataKey, UpdateRequestQueueMessage, ChangeData, LookupData} from "../src-config/server-config";
 import { gzipText } from "../../../core/utils/gzip";
 import { insertOrMergeTableRow_sdk } from "../../../core/utils/azure-storage-binding/tables-sdk";
 
@@ -45,7 +45,7 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
                 tableName: config.lookupTable_tableName_fromQueueTrigger,
                 partitionKey: config.lookupTable_partitionKey_fromQueueTrigger,
                 rowKey: config.lookupTable_rowKey_fromQueueTrigger,
-                connection: config.lookupBlob_connection,
+                connection: config.lookupTable_connection,
             },
             {
                 name: "outLookupTable",
@@ -54,7 +54,7 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
                 tableName: config.lookupTable_tableName_fromQueueTrigger,
                 partitionKey: config.lookupTable_partitionKey_fromQueueTrigger,
                 rowKey: config.lookupTable_rowKey_fromQueueTrigger,
-                connection: config.lookupBlob_connection,
+                connection: config.lookupTable_connection,
             },
 
         ],
@@ -62,7 +62,7 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
     };
 }
 
-export async function runFunction(config: DataUpdateBlobConfig<any>, context: {
+export async function runFunction(config: ServerConfigType, context: {
     log: typeof console.log,
     done: () => void,
     bindingData: {},
@@ -71,8 +71,8 @@ export async function runFunction(config: DataUpdateBlobConfig<any>, context: {
         inRawDataBlob: any,
         outRawDataBlob: any,
         outDataDownloadBlob: any,
-        inLookupTable: LookupTable,
-        outLookupTable: LookupTable,
+        inLookupTable: LookupData,
+        outLookupTable: LookupData,
     }
 }) {
     context.log('START');
@@ -92,7 +92,7 @@ export async function runFunction(config: DataUpdateBlobConfig<any>, context: {
     context.log('Update Lookup Table');
     // context.bindings.outLookupTable = { startTime: context.bindings.inUpdateExecuteQueue.startTime };
     context.bindings.outLookupTable = await insertOrMergeTableRow_sdk(config.getLookupTableRowKey_fromQueueTrigger(context.bindings.inUpdateExecuteQueue),
-        context.bindings.inLookupTable, { timeKey: context.bindings.inUpdateExecuteQueue.timeKey } as LookupTable);
+        context.bindings.inLookupTable, { timeKey: context.bindings.inUpdateExecuteQueue.timeKey } as LookupData);
 
     context.log('DONE');
     context.done();

@@ -1,4 +1,4 @@
-import { DataUpdateConfig, DataKey, FunctionTemplateConfig, UpdateRequestQueueMessage, ChangeTable, LookupTable, HttpFunction_BindingData } from "../src-config/config";
+import { ServerConfig, DataKey, FunctionTemplateConfig, UpdateRequestQueueMessage, ChangeData, LookupData, HttpFunction_BindingData } from "../src-config/server-config";
 import { HttpFunctionResponse, HttpFunctionRequest } from "../../../core/types/functions";
 import { readBlob } from "../../../core/utils/azure-storage-sdk/blobs";
 
@@ -29,7 +29,7 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
                 tableName: config.lookupTable_tableName,
                 partitionKey: config.lookupTable_partitionKey,
                 rowKey: config.lookupTable_rowKey,
-                connection: config.lookupBlob_connection
+                connection: config.lookupTable_connection
             },
             {
                 name: "outUpdateRequestQueue",
@@ -43,13 +43,13 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
     };
 }
 
-export async function runFunction(config: DataUpdateConfig, context: {
+export async function runFunction(config: ServerConfig, context: {
     log: typeof console.log,
     done: () => void,
     res: HttpFunctionResponse,
     bindingData: HttpFunction_BindingData,
     bindings: {
-        inLookupTable: LookupTable,
+        inLookupTable: LookupData,
         outUpdateRequestQueue: UpdateRequestQueueMessage,
     }
 }, req: HttpFunctionRequest) {

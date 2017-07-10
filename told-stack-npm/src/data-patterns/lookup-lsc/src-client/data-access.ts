@@ -1,9 +1,9 @@
 import fetch from 'node-fetch';
-import { DataAccessConfig, DataKey, LookupTable } from "../src-config/config";
+import { ClientConfigType, DataKey, LookupData } from "../src-config/client-config";
 import { setInterval_exponentialBackoff, clearInterval_exponentialBackoff } from "../../../core/utils/time";
 
 export class DataAccess {
-    constructor(private config: DataAccessConfig) { }
+    constructor(private config: ClientConfigType) { }
 
     async read(key: DataKey) {
         return readAppBlob(this.config, key);
@@ -14,27 +14,27 @@ export class DataAccess {
     }
 }
 
-export async function readAppBlob<T>(config: DataAccessConfig, key: DataKey) {
+export async function readAppBlob<T>(config: ClientConfigType, key: DataKey) {
     const { data } = await readAppBlob_inner<T>(config, key);
     return data;
 }
 
-export async function readAppBlob_inner<T>(config: DataAccessConfig, key: DataKey) {
+export async function readAppBlob_inner<T>(config: ClientConfigType, key: DataKey) {
     const rLookup = await fetch(config.getLookupUrl(key));
-    const lookup = await rLookup.json() as LookupTable;
+    const lookup = await rLookup.json() as LookupData;
     const r = await fetch(config.getDataDownloadUrl(key, lookup));
     const data = await r.json() as T;
     return { data, lookup };
 }
 
-export async function readAppBlobAndUpdate<T>(config: DataAccessConfig, key: DataKey, notifyUpdate: () => void) {
+export async function readAppBlobAndUpdate<T>(config: ClientConfigType, key: DataKey, notifyUpdate: () => void) {
     const { data, lookup } = await readAppBlob_inner<T>(config, key);
 
     if (notifyUpdate) {
 
         const intervalId = setInterval_exponentialBackoff(async () => {
             const rLookup_update = await fetch(config.getLookupUrl(key));
-            const lName_update = await rLookup_update.json() as LookupTable;
+            const lName_update = await rLookup_update.json() as LookupData;
 
             if (JSON.stringify(lName_update) !== JSON.stringify(lookup)) {
                 clearInterval_exponentialBackoff(intervalId);

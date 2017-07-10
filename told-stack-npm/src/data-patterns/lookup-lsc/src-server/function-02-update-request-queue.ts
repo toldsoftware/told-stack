@@ -1,4 +1,4 @@
-import { FunctionTemplateConfig, DataUpdateConfig, DataKey, UpdateRequestQueueMessage, ChangeTable } from "../src-config/config";
+import { FunctionTemplateConfig, ServerConfigType, DataKey, UpdateRequestQueueMessage, ChangeData } from "../src-config/server-config";
 import { insertOrMergeTableRow_sdk } from "../../../core/utils/azure-storage-binding/tables-sdk";
 
 // Queue Trigger: Update Request Queue
@@ -61,7 +61,7 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
     };
 }
 
-export async function runFunction(config: DataUpdateConfig, context: {
+export async function runFunction(config: ServerConfigType, context: {
     log: typeof console.log,
     done: () => void,
     bindingData: {
@@ -69,8 +69,8 @@ export async function runFunction(config: DataUpdateConfig, context: {
     },
     bindings: {
         inUpdateRequestQueue: UpdateRequestQueueMessage,
-        inChangeTable: ChangeTable,
-        outChangeTable: ChangeTable,
+        inChangeTable: ChangeData,
+        outChangeTable: ChangeData,
         outUpdateExecuteQueue: UpdateRequestQueueMessage,
         outRawDataBlob: any,
         outDataDownloadBlob: any,
@@ -106,7 +106,7 @@ export async function runFunction(config: DataUpdateConfig, context: {
     // context.bindings.outChangeTable = { startTime: Date.now() };
     context.bindings.outChangeTable = await insertOrMergeTableRow_sdk(config.getChangeTableRowKey_fromQueueTrigger(context.bindings.inUpdateRequestQueue),
         context.bindings.inChangeTable,
-        { changeTime: Date.now() } as ChangeTable);
+        { changeTime: Date.now() } as ChangeData);
 
     context.bindings.outUpdateExecuteQueue = context.bindings.inUpdateRequestQueue;
 

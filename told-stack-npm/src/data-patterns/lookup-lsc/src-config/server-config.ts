@@ -1,39 +1,25 @@
 import { HttpFunctionRequest } from "../../../core/types/functions";
+import { DataKey, LookupData, ClientConfig } from "./client-config";
+export { DataKey, LookupData };
 
-export interface DataKey {
-    containerName: string;
-    blobName: string;
-}
-
-export interface LookupTable {
-    timeKey: string
-};
-
-export interface DataAccessConfig {
-    timePollSeconds: number;
-    maxPollCount: number;
-
-    getLookupUrl(key: DataKey): string;
-    getDataDownloadUrl(key: DataKey, lookup: LookupTable): string;
-}
-
-export interface ChangeTable {
+export interface ChangeData {
     changeTime: number;
 }
 
-export interface DataUpdateConfig {
+export interface ServerConfigType {
     timeToLiveSeconds: number;
     timeExtendSeconds: number;
     timeExecutionSeconds: number;
     timePollSeconds: number;
 
-    getLookupBlobName(blobName: string): string;
-    getDataDownloadBlobName(blobName: string, lookup: LookupTable): string;
+    getDataDownloadBlobName(blobName: string, lookup: LookupData): string;
 
     getKeyFromRequest(req: HttpFunctionRequest, bindingData: HttpFunction_BindingData): DataKey;
 
     getChangeTableRowKey_fromQueueTrigger(queueTrigger: UpdateRequestQueueMessage): { table: string, partition: string, row: string };
     getLookupTableRowKey_fromQueueTrigger(queueTrigger: UpdateRequestQueueMessage): { table: string, partition: string, row: string };
+
+    obtainBlobData(oldBlob: any, key: DataKey): Promise<any>;
 }
 
 export interface HttpFunction_BindingData {
@@ -41,14 +27,10 @@ export interface HttpFunction_BindingData {
     blob: string;
 }
 
-export interface DataUpdateBlobConfig<T> extends DataUpdateConfig {
-    obtainBlobData(oldBlob: T, key: DataKey): Promise<T>;
-}
-
 export interface FunctionTemplateConfig {
     http_route: string;
 
-    lookupBlob_connection: string;
+    lookupTable_connection: string;
     lookupTable_tableName: string;
     lookupTable_partitionKey: string;
     lookupTable_rowKey: string;
@@ -81,35 +63,32 @@ export interface UpdateRequestQueueMessage extends DataKey {
     timeKey: string;
 }
 
-export class Config<T> implements DataAccessConfig, DataUpdateConfig, FunctionTemplateConfig {
+export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
     timeToLiveSeconds = 60;
     timeExtendSeconds = 1;
     timeExecutionSeconds = 10;
+    timePollSeconds = this.clientConfig.timePollSeconds;
 
-    timePollSeconds = 1;
-    maxPollCount = 5;
-
-    domain = '/';
-    blobProxyRoutePath = 'blob';
-
-    lookupBlob_connection = this.default_storageConnectionString_AppSettingName;
     updateRequestQueue_connection = this.default_storageConnectionString_AppSettingName;
     updateExecuteQueue_connection = this.default_storageConnectionString_AppSettingName;
+    lookupTable_connection = this.default_storageConnectionString_AppSettingName;
     changeTable_connection = this.default_storageConnectionString_AppSettingName;
     dataRawBlob_connection = this.default_storageConnectionString_AppSettingName;
     dataDownloadBlob_connection = this.default_storageConnectionString_AppSettingName;
 
+    // Slash in blobName is not supported (i.e. {*blob}) because table partitionKey/rowKey cannot / in the name
+    // http_route = this.apiRoutePath + '/{container}/{*blob}';
+    http_route = this.clientConfig.apiRoutePath + '/{container}/{blob}';
+    getDataDownloadBlobName = this.clientConfig.getDataDownloadBlobName;
+    dataRawBlob_path_fromQueueTrigger = `{containerName}/{blobName}`;
+    dataDownloadBlob_path_fromQueueTriggerDate = `{containerName}/{blobName}/{timeKey}.gzip`;
+
     constructor(
-        public obtainBlobData: (oldBlob: T, key: DataKey) => Promise<T>,
-        private apiRoutePath = 'api/lookup-lsc',
+        private clientConfig: ClientConfig,
+        public obtainBlobData: <T>(oldBlob: T, key: DataKey) => Promise<T>,
         public default_storageConnectionString_AppSettingName = 'AZURE_STORAGE_CONNECTION_STRING'
     ) { }
 
-    // Function Template
-
-    // Slash in blobName is not supported (i.e. {*blob}) because table partitionKey/rowKey cannot / in the name
-    // http_route = this.apiRoutePath + '/{container}/{*blob}';
-    http_route = this.apiRoutePath + '/{container}/{blob}';
     getKeyFromRequest(req: HttpFunctionRequest, bindingData: HttpFunction_BindingData): DataKey {
         const d = bindingData;
 
@@ -123,8 +102,6 @@ export class Config<T> implements DataAccessConfig, DataUpdateConfig, FunctionTe
     updateExecuteQueue_queueName = 'lookup-lsc-update-execute-queue';
     // These will encode to a url that receives parametes
     // Example: '{container}/{blob}/_lookup.txt'
-
-    lookupBlob_path = `{container}/{blob}/_lookup.txt`;
 
     lookupTable_tableName = `blobaccess`;
     lookupTable_partitionKey = `{container}_{blob}`;
@@ -170,23 +147,4 @@ export class Config<T> implements DataAccessConfig, DataUpdateConfig, FunctionTe
         };
     }
 
-    dataRawBlob_path_fromQueueTrigger = `{containerName}/{blobName}`;
-    dataDownloadBlob_path_fromQueueTriggerDate = `{containerName}/{blobName}/{timeKey}.gzip`;
-
-    getLookupUrl(key: DataKey): string {
-        return `${this.domain}/${this.apiRoutePath}/${key.containerName}/${key.blobName}`;
-    }
-
-    getDataDownloadUrl(key: DataKey, lookup: LookupTable): string {
-        return `${this.domain}/${this.blobProxyRoutePath}/${key.containerName}/${this.getDataDownloadBlobName(key.blobName, lookup)}`;
-    }
-
-    getLookupBlobName(blobName: string) {
-        return `${blobName}/_lookup.txt`;
-    }
-
-    getDataDownloadBlobName(blobName: string, lookup: LookupTable) {
-        // TODO: Test if works with .ext and switch to underscore if needed
-        return `${blobName}/${lookup.timeKey}.gzip`;
-    }
 }

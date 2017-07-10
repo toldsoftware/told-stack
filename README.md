@@ -16,8 +16,12 @@ Monorepo for Feature Oriented Modules
     - `npm start`
 - Run Functions Locally
     - Inside `samples/demo/_deploy`
-    - `func host start`
-
+    - `func host start --debug VSCODE`
+- Remote Testing
+    - Example
+        - Multiple Requests at Multiple Urls
+        - In Git Bash:
+        - `curl http://toldstack.toldpro.com/api/lookup-lsc/test/aaa100[101-120]`
 
 ## Structure
 
@@ -26,8 +30,7 @@ Monorepo for Feature Oriented Modules
 - Folders:
     - src-client: Client Code
     - src-server: Server Code (Azure Functions Api)
-    - src-data: Shared Data Types
-    - 
+    - src-config: Configuration Settings for the Module
 
 ## Modules
 
