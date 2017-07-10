@@ -3,7 +3,7 @@
     "node_modules"
   ],
   "compilerOptions": {
-    "declaration": true,
+    // "declaration": true,
     "noResolve": false,
     "module": "commonjs",
     "target": "es2015",
@@ -12,7 +12,7 @@
     "noImplicitAny": true,
     "noImplicitReturns": true,
     "noImplicitThis": true,
-    "outDir": "./lib",
+    // "outDir": "./lib",
     "types": [
       "node"
     ],
@@ -22,3 +22,7 @@
     "./src/**/*"
   ]
 }
+
+// Leave .js side by side with .ts
+// Following Option 3 from:
+// https://github.com/Microsoft/TypeScript/issues/6496#issuecomment-302886203

@@ -17,22 +17,34 @@ export interface ClientConfigType {
     getDataDownloadUrl(key: DataKey, lookup: LookupData): string;
 }
 
-export class ClientConfig implements ClientConfigType {
+export interface ClientConfigOptions {
+    timePollSeconds: number;
+    maxPollCount: number;
+    lookup_domain: string;
+    lookup_route: string;
+    downloadBlob_domain: string;
+    downloadBlob_route: string;
+}
+
+export class ClientConfig implements ClientConfigType, ClientConfigOptions {
     timePollSeconds = 1;
     maxPollCount = 5;
 
-    constructor(
-        public domain = '/',
-        public apiRoutePath = 'api/lookup-lsc',
-        public blobProxyRoutePath = 'blob',
-    ) { }
+    lookup_domain = '/';
+    lookup_route = 'api/lookup-lsc';
+    downloadBlob_domain = '/';
+    downloadBlob_route = 'blob';
+
+    constructor(options?: Partial<ClientConfigOptions>) {
+        Object.assign(this, options);
+    }
 
     getLookupUrl(key: DataKey): string {
-        return `${this.domain}/${this.apiRoutePath}/${key.containerName}/${key.blobName}`;
+        return `${this.lookup_domain}/${this.lookup_route}/${key.containerName}/${key.blobName}`;
     }
 
     getDataDownloadUrl(key: DataKey, lookup: LookupData): string {
-        return `${this.domain}/${this.blobProxyRoutePath}/${key.containerName}/${this.getDataDownloadBlobName(key.blobName, lookup)}`;
+        return `${this.downloadBlob_domain}/${this.downloadBlob_route ? this.downloadBlob_route + '/' : ''}${key.containerName}/${this.getDataDownloadBlobName(key.blobName, lookup)}`;
     }
 
     getDataDownloadBlobName(blobName: string, lookup: LookupData) {

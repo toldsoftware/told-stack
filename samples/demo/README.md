@@ -4,4 +4,5 @@ Demo all Modules of Told Stack in a Cross Platform App (Web, iOS, Android) with 
 
 ## TODO
 
-Add the Android and iOS Folders for src-mobile
+- Add Post Build Step: Move Static Files to _deploy (Instead of putting them directly in _deploy)
+- Add the Android and iOS Folders for src-mobile

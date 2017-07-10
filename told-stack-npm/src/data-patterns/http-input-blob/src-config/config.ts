@@ -1,4 +1,4 @@
-import { HttpFunctionRequest } from "../../../core/types/functions";
+import { HttpFunctionRequest, HttpResponseOptions } from "../../../core/types/functions";
 
 export interface HttpFunction_TemplateConfig {
     http_route: string;
@@ -7,7 +7,8 @@ export interface HttpFunction_TemplateConfig {
 }
 
 export interface HttpFunction_Config {
-    getDataFromRequest(req: HttpFunctionRequest, bindingData: HttpFunction_BindingData): InputBlobData;
+    // getDataFromRequest(req: HttpFunctionRequest, bindingData: HttpFunction_BindingData): InputBlobData;
+    responseOptions: HttpResponseOptions;
 }
 
 export interface HttpFunction_BindingData {
@@ -20,16 +21,26 @@ export interface InputBlobData {
     value: any;
 }
 
+export interface ConfigOptions {
+    http_routeRoot?: string;
+    default_storageConnectionString_AppSettingName?: string;
+    responseOptions?: HttpResponseOptions;
+}
+
 export class Config<T> implements HttpFunction_TemplateConfig, HttpFunction_Config {
-    constructor(
-        public http_routeRoot = 'api/http-input-blob',
-        public default_storageConnectionString_AppSettingName = 'AZURE_STORAGE_CONNECTION_STRING') { }
+    http_routeRoot = 'api/http-input-blob';
+    default_storageConnectionString_AppSettingName = 'AZURE_STORAGE_CONNECTION_STRING';
+    responseOptions: HttpResponseOptions = {};
+
+    constructor(options: ConfigOptions = {}) {
+        Object.assign(this, options);
+    }
 
     http_route = this.http_routeRoot + '/{container}/{*blob}';
     inputBlob_path = '{container}/{blob}';
     inputBlob_connection = this.default_storageConnectionString_AppSettingName;
 
-    getDataFromRequest(req: HttpFunctionRequest, bindingData: HttpFunction_BindingData) {
-        return { key: { container: bindingData.container, blob: bindingData.blob }, value: req.body };
-    }
+    // getDataFromRequest(req: HttpFunctionRequest, bindingData: HttpFunction_BindingData) {
+    //     return { key: { container: bindingData.container, blob: bindingData.blob }, value: req.body };
+    // }
 }

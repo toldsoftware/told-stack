@@ -56,7 +56,10 @@ export interface FunctionTemplateConfig {
     dataRawBlob_path_fromQueueTrigger: string;
 
     dataDownloadBlob_connection: string;
-    dataDownloadBlob_path_fromQueueTriggerDate: string;
+    dataDownloadBlob_path_from_queueTriggerDate: string;
+
+    http_dataDownload_route: string;
+    dataDownloadBlob_path_from_http_dataDownload_route: string;
 }
 
 export interface UpdateRequestQueueMessage extends DataKey {
@@ -78,10 +81,12 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
 
     // Slash in blobName is not supported (i.e. {*blob}) because table partitionKey/rowKey cannot / in the name
     // http_route = this.apiRoutePath + '/{container}/{*blob}';
-    http_route = this.clientConfig.apiRoutePath + '/{container}/{blob}';
+    http_route = this.clientConfig.lookup_route + '/{container}/{blob}';
     getDataDownloadBlobName = this.clientConfig.getDataDownloadBlobName;
     dataRawBlob_path_fromQueueTrigger = `{containerName}/{blobName}`;
-    dataDownloadBlob_path_fromQueueTriggerDate = `{containerName}/{blobName}/{timeKey}.gzip`;
+    dataDownloadBlob_path_from_queueTriggerDate = `{containerName}/{blobName}/{timeKey}.gzip`;
+    dataDownloadBlob_path_from_http_dataDownload_route = `{containerName}/{blobName}/{timeKey}.gzip`;
+    http_dataDownload_route = this.clientConfig.downloadBlob_route + '/{container}/{blob}/{timeKey}';
 
     constructor(
         private clientConfig: ClientConfig,

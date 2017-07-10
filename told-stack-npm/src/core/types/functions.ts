@@ -8,3 +8,9 @@ export interface HttpFunctionResponse {
     body?: any;
     headers?: { [name: string]: string }
 }
+
+export interface HttpResponseOptions {
+    cacheControl?: string;
+    contentType?: string;
+    contentEncoding?: string;
+}

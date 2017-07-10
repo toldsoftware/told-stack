@@ -35,7 +35,7 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
                 name: "outDataDownloadBlob",
                 type: "blob",
                 direction: "out",
-                path: config.dataDownloadBlob_path_fromQueueTriggerDate,
+                path: config.dataDownloadBlob_path_from_queueTriggerDate,
                 connection: config.dataDownloadBlob_connection,
             },
             {

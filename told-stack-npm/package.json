@@ -2,7 +2,8 @@
   "name": "@told/stack",
   "version": "1.0.0",
   "description": "Monorepo for Feature Oriented Modules",
-  "main": "index.js",
+  "main": "./src/index.js",
+  "types": "./src/index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "run-p start-pre-build start-webpack start-post-build",
@@ -21,7 +22,7 @@
     "typescript": "^2.4.1",
     "webpack": "^3.0.0"
   },
-  "peerDependencies":{
+  "peerDependencies": {
     "node-fetch": "^1.7.1",
     "azure-storage": "^2.2.1"
   }

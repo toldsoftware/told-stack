@@ -46,7 +46,9 @@ export function runFunction(config: HttpFunction_Config, context: {
     context.res = {
         body: data,
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': config.responseOptions.contentType || 'application/json',
+            'Content-Encoding': config.responseOptions.contentEncoding || undefined,
+            'Cache-Control': config.responseOptions.cacheControl || undefined,
         }
     };
     context.done();

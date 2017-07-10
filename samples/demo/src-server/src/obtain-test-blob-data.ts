@@ -1,4 +1,4 @@
-import { DataKey } from "@told/stack/lib/data-patterns/lookup-lsc/src-config/config";
+import { DataKey } from "@told/stack/src/data-patterns/lookup-lsc/src-config/server-config";
 
 export interface TestBlob {
     data: {
