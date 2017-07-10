@@ -35,6 +35,8 @@ export class ClientConfig implements ClientConfigType, ClientConfigOptions {
     downloadBlob_domain = '/';
     downloadBlob_route = 'blob';
 
+    shouldGzipDownloadBlob = false;
+
     constructor(options?: Partial<ClientConfigOptions>) {
         Object.assign(this, options);
     }
@@ -49,6 +51,6 @@ export class ClientConfig implements ClientConfigType, ClientConfigOptions {
 
     getDataDownloadBlobName(blobName: string, lookup: LookupData) {
         // TODO: Test if works with .ext and switch to underscore if needed
-        return `${blobName}/${lookup.timeKey}.gzip`;
+        return `${blobName}/${lookup.timeKey}${this.shouldGzipDownloadBlob ? '_gzip' : ''}`;
     }
 }

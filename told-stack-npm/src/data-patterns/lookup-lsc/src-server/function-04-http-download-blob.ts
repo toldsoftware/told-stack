@@ -13,8 +13,8 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
 export async function runFunction(config: ServerConfig, context: any, req: HttpFunctionRequest) {
     return runFunction_inner({
         responseOptions: {
-            cacheControl: 'public, max-age: ' + (config.timeToLiveSeconds * 4),
-            contentEncoding: 'gzip',
+            cacheControl: 'public, max-age=' + (config.timeToLiveSeconds * 4),
+            contentEncoding: config.shouldGzip ? 'gzip' : undefined,
             contentType: 'application/json',
         }
     }, context, req);

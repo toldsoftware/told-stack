@@ -6,7 +6,7 @@ import { webpack_generateEntry } from '@told/stack/src/build/webpack-generate-en
 // See package.json
 // npm start 
 // https://github.com/webpack/webpack-dev-server/issues/440
-const entry = webpack_generateEntry(__dirname, entries);
+const entry = webpack_generateEntry(__dirname, entries, '../_deploy');
 
 const config: webpack.Configuration = {
     // entry: {

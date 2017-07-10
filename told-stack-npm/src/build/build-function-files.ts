@@ -10,7 +10,7 @@ const intermediateDir = '_intermediate';
 export async function buildFunctionJsonAndIndexFiles(options: {
     destDir: string
 }, entries: EntryInfoResolved[]) {
-    const destDir = deployDir;
+    const destDir = options.destDir || deployDir;
     const destDirFullPath = path.resolve(destDir);
     await ensureDirectoryExists(destDirFullPath);
 
@@ -33,9 +33,9 @@ export async function buildFunctionJsonAndIndexFiles(options: {
 }
 
 export async function buildFunctionRunFile(options: {
-    destDir: string
+    intermediateDestDir: string
 }, entries: EntryInfo[]) {
-    const destDir = intermediateDir;
+    const destDir = options.intermediateDestDir || intermediateDir;
     const destDirFullPath = path.resolve(destDir);
     await ensureDirectoryExists(destDirFullPath);
 

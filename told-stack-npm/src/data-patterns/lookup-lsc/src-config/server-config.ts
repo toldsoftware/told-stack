@@ -12,6 +12,8 @@ export interface ServerConfigType {
     timeExecutionSeconds: number;
     timePollSeconds: number;
 
+    shouldGzip: boolean;
+
     getDataDownloadBlobName(blobName: string, lookup: LookupData): string;
 
     getKeyFromRequest(req: HttpFunctionRequest, bindingData: HttpFunction_BindingData): DataKey;
@@ -23,8 +25,8 @@ export interface ServerConfigType {
 }
 
 export interface HttpFunction_BindingData {
-    container: string;
-    blob: string;
+    containerName: string;
+    blobName: string;
 }
 
 export interface FunctionTemplateConfig {
@@ -72,6 +74,8 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
     timeExecutionSeconds = 10;
     timePollSeconds = this.clientConfig.timePollSeconds;
 
+    shouldGzip = this.clientConfig.shouldGzipDownloadBlob;
+
     updateRequestQueue_connection = this.default_storageConnectionString_AppSettingName;
     updateExecuteQueue_connection = this.default_storageConnectionString_AppSettingName;
     lookupTable_connection = this.default_storageConnectionString_AppSettingName;
@@ -79,14 +83,15 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
     dataRawBlob_connection = this.default_storageConnectionString_AppSettingName;
     dataDownloadBlob_connection = this.default_storageConnectionString_AppSettingName;
 
-    // Slash in blobName is not supported (i.e. {*blob}) because table partitionKey/rowKey cannot / in the name
-    // http_route = this.apiRoutePath + '/{container}/{*blob}';
-    http_route = this.clientConfig.lookup_route + '/{container}/{blob}';
+    // Slash in blobName is not supported (i.e. {*blobName}) because table partitionKey/rowKey cannot / in the name
+    // http_route = this.apiRoutePath + '/{containerName}/{*blobName}';
+    http_route = this.clientConfig.lookup_route + '/{containerName}/{blobName}';
     getDataDownloadBlobName = this.clientConfig.getDataDownloadBlobName;
     dataRawBlob_path_fromQueueTrigger = `{containerName}/{blobName}`;
-    dataDownloadBlob_path_from_queueTriggerDate = `{containerName}/{blobName}/{timeKey}.gzip`;
-    dataDownloadBlob_path_from_http_dataDownload_route = `{containerName}/{blobName}/{timeKey}.gzip`;
-    http_dataDownload_route = this.clientConfig.downloadBlob_route + '/{container}/{blob}/{timeKey}';
+    dataDownloadBlob_path_from_queueTriggerDate = `{containerName}/{blobName}/{timeKey}${this.shouldGzip ? '_gzip' : ''}`;
+
+    http_dataDownload_route = this.clientConfig.downloadBlob_route + '/{containerName}/{blobName}/{timeKey}';
+    dataDownloadBlob_path_from_http_dataDownload_route = `{containerName}/{blobName}/{timeKey}${this.shouldGzip ? '_gzip' : ''}`;
 
     constructor(
         private clientConfig: ClientConfig,
@@ -98,18 +103,18 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
         const d = bindingData;
 
         return {
-            containerName: d.container,
-            blobName: d.blob,
+            containerName: d.containerName,
+            blobName: d.blobName,
         };
     }
 
     updateRequestQueue_queueName = 'lookup-lsc-update-request-queue';
     updateExecuteQueue_queueName = 'lookup-lsc-update-execute-queue';
     // These will encode to a url that receives parametes
-    // Example: '{container}/{blob}/_lookup.txt'
+    // Example: '{containerName}/{blobName}/_lookup.txt'
 
     lookupTable_tableName = `blobaccess`;
-    lookupTable_partitionKey = `{container}_{blob}`;
+    lookupTable_partitionKey = `{containerName}_{blobName}`;
     lookupTable_rowKey = `lookup`;
 
     lookupTable_tableName_fromQueueTrigger = `blobaccess`;
@@ -131,7 +136,7 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
     }
 
     changeTable_tableName = `blobaccess`;
-    changeTable_partitionKey = `{container}_{blob}`;
+    changeTable_partitionKey = `{containerName}_{blobName}`;
     changeTable_rowKey = `change`;
 
     changeTable_tableName_fromQueueTrigger = `blobaccess`;
