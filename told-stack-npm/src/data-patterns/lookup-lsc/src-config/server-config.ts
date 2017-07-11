@@ -75,7 +75,7 @@ export interface UpdateRequestQueueMessage extends DataKey {
     timeKey: string;
 }
 
-export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
+export class ServerConfig<T> implements ServerConfigType, FunctionTemplateConfig {
     timeToLiveSeconds = this.clientConfig.timeToLiveSeconds;
     get timeToLiveSeconds_downloadBlob() { return this.timeToLiveSeconds * 4 + 300; }
     timePollSeconds = this.clientConfig.timePollSeconds;
@@ -108,7 +108,7 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
 
     constructor(
         private clientConfig: ClientConfig,
-        public obtainBlobData: <T>(oldBlob: T, key: DataKey) => Promise<T>,
+        public obtainBlobData: (oldBlob: T, key: DataKey) => Promise<T>,
         public default_storageConnectionString_AppSettingName = 'AZURE_STORAGE_CONNECTION_STRING'
     ) { }
 
