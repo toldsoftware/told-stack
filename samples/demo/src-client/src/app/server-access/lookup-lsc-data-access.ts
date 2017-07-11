@@ -1,4 +1,4 @@
 import { DataAccess } from '@told/stack/src/data-patterns/lookup-lsc/src-client/data-access';
-import { clientConfig } from '../../../config/config-lookup-lsc';
+import { clientConfig_lookupLsc as clientConfig } from '../../config';
 
 export const lookupLscDataAccess = new DataAccess(clientConfig);

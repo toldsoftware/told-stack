@@ -1,5 +1,5 @@
 import * as webpack from 'webpack';
-import { entries } from "./config/entries";
+import { entries } from "../config/src/entries-server";
 import { webpack_generateEntry } from '@told/stack/src/build/webpack-generate-entry';
 
 // Use Nodemon to monitor this for changes

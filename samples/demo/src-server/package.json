@@ -6,9 +6,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "run-p start-pre-build start-webpack start-post-build",
-    "start-pre-build": "nodemon -e ts --watch config/entries.ts --exec \"ts-node ./build/pre-build.ts\"",
-    "start-webpack": "nodemon -e ts --watch config --watch webpack.config.ts --exec \"webpack -w\"",
-    "start-post-build": "nodemon -e ts --watch config/entries.ts --exec \"ts-node ./build/post-build.ts\""
+    "start-pre-build": "nodemon -e ts --watch ../config/src --exec \"ts-node ./build/pre-build.ts\"",
+    "start-webpack": "nodemon -e ts --watch ../config/src --watch webpack.config.ts --exec \"webpack -w\"",
+    "start-post-build": "nodemon -e ts --watch ../config/src --exec \"ts-node ./build/post-build.ts\""
   },
   "author": "Rick Love",
   "license": "MIT",

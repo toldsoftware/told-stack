@@ -1,4 +1,4 @@
 import { runPreBuild } from '@told/stack/src/build/pre-build';
-import { entries } from "../config/entries";
+import { entries } from "../../config/src/entries-server";
 
-runPreBuild(entries);
+runPreBuild(entries, '../../config/src/');
