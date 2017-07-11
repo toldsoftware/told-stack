@@ -60,3 +60,12 @@ export function groupToArray<T>(items: T[], getKey: (x: T) => string) {
     const g = group(items, getKey);
     return Object.getOwnPropertyNames(g).map(k => g[k].items);
 }
+
+
+export function assignPartial<T>(t: T, p: Partial<T>): T {
+    for (let k in p) {
+        t[k] = p[k];
+    }
+
+    return t;
+}

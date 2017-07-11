@@ -13,7 +13,7 @@ export class DataAccess<T> {
         return readAppBlob<T>(this.config, key);
     }
 
-    async readAndUpdate(key: DataKey, options: NotifyUpdateOptions, notifyUpdate: (newData: T) => void) {
+    async readAndUpdate(key: DataKey, options: NotifyUpdateOptions, notifyUpdate: (newData: T, timeToExpireSeconds: number, cancel: () => void) => void) {
         return readAppBlobAndUpdate<T>(this.config, key, options, notifyUpdate);
     }
 }
@@ -38,45 +38,50 @@ export async function readAppBlobData<T>(config: ClientConfigType, key: DataKey,
     return { data, lookup };
 }
 
-export async function readAppBlobAndUpdate<T>(config: ClientConfigType, key: DataKey, options: NotifyUpdateOptions, notifyUpdate: (newData: T, cancel: () => void) => void) {
+export async function readAppBlobAndUpdate<T>(config: ClientConfigType, key: DataKey, options: NotifyUpdateOptions, notifyUpdate: (newData: T, timeToExpireSeconds: number, cancel: () => void) => void) {
     let { data, lookup } = await readAppBlob_inner<T>(config, key);
 
     if (notifyUpdate) {
 
-        let refreshTimeoutId: any = 0;
+        let refreshIntervalId: any = 0;
         const cancel = () => {
-            clearTimeout(refreshTimeoutId);
+            clearInterval(refreshIntervalId);
+            clearInterval_exponentialBackoff(refreshIntervalId);
         };
 
-        const lookupLoop = () => {
-            console.log('readAppBlobAndUpdate lookupLoop', { ...lookup });
+        const lookupLoop = async () => {
+            console.log('readAppBlobAndUpdate lookupLoop');
+            const lookup_old = lookup;
 
-            const intervalId = setInterval_exponentialBackoff(async () => {
-                const rLookup_update = await fetch(config.getLookupUrl(key));
-                const lookup_update = await rLookup_update.json() as LookupResponse;
+            const rLookup_update = await fetch(config.getLookupUrl(key));
+            lookup = await rLookup_update.json() as LookupResponse;
 
-                if (JSON.stringify(lookup_update) !== JSON.stringify(lookup)) {
-                    clearInterval_exponentialBackoff(intervalId);
-
-                    if (JSON.stringify(lookup_update.timeKey) !== JSON.stringify(lookup.timeKey)) {
-                        const { data } = await readAppBlobData<T>(config, key, lookup_update);
-                        notifyUpdate(data, cancel);
-                    }
-
-                    lookup = lookup_update;
-
-                    if (options.shouldAutoRefresh) {
-                        console.log('readAppBlobAndUpdate AutoRefresh', { ...lookup });
-                        refreshTimeoutId = setTimeout(lookupLoop, lookup.timeToExpireSeconds * 1000);
+            if (JSON.stringify(lookup_old) !== JSON.stringify(lookup)) {
+                if (JSON.stringify(lookup_old.timeKey) !== JSON.stringify(lookup.timeKey)) {
+                    if (lookup.error) {
+                        notifyUpdate(null, lookup.timeToExpireSeconds, cancel);
+                    } else {
+                        const { data } = await readAppBlobData<T>(config, key, lookup);
+                        try {
+                            notifyUpdate(data, lookup.timeToExpireSeconds, cancel);
+                        } catch (err) {
+                            console.error('readAppBlobAndUpdate notifyUpdate ERROR', { err });
+                        }
                     }
                 }
-            }, config.timePollSeconds * 1000, {
-                    maxAttempts: config.maxPollCount,
-                });
+
+
+                if (options.shouldAutoRefresh) {
+                    console.log('readAppBlobAndUpdate AutoRefresh', { ...lookup });
+                    cancel();
+                    refreshIntervalId = setInterval(lookupLoop, lookup.timeToExpireSeconds * 1000);
+                }
+            }
+
         };
 
-        lookupLoop();
-
+        console.log('readAppBlobAndUpdate Loop Start', { ...lookup });
+        refreshIntervalId = setInterval_exponentialBackoff(lookupLoop, lookup.timeToExpireSeconds * 1000 / (1 + 2 + 4), { maxTime: config.timeToLiveSeconds * 1000 });
     }
 
     return data;

@@ -1,4 +1,5 @@
 import { HttpFunctionRequest } from "../../../core/types/functions";
+import { assignPartial } from "../../../core/utils/objects";
 
 export interface DataKey {
     containerName: string;
@@ -50,7 +51,7 @@ export class ClientConfig implements ClientConfigType, ClientConfigOptions {
     shouldGzipDownloadBlob = false;
 
     constructor(options?: Partial<ClientConfigOptions>) {
-        Object.assign(this, options);
+        assignPartial(this, options);
     }
 
     getLookupUrl(key: DataKey): string {

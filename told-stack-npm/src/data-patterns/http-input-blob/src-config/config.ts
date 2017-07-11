@@ -1,4 +1,5 @@
 import { HttpFunctionRequest, HttpResponseOptions } from "../../../core/types/functions";
+import { assignPartial } from "../../../core/utils/objects";
 
 export interface HttpFunction_TemplateConfig {
     http_route: string;
@@ -22,18 +23,18 @@ export interface InputBlobData {
 }
 
 export interface ConfigOptions {
-    http_routeRoot?: string;
-    default_storageConnectionString_AppSettingName?: string;
-    responseOptions?: HttpResponseOptions;
+    http_routeRoot: string;
+    default_storageConnectionString_AppSettingName: string;
+    responseOptions: HttpResponseOptions;
 }
 
-export class Config<T> implements HttpFunction_TemplateConfig, HttpFunction_Config {
+export class Config<T> implements HttpFunction_TemplateConfig, HttpFunction_Config, ConfigOptions {
     http_routeRoot = 'api/http-input-blob';
     default_storageConnectionString_AppSettingName = 'AZURE_STORAGE_CONNECTION_STRING';
     responseOptions: HttpResponseOptions = {};
 
-    constructor(options: ConfigOptions = {}) {
-        Object.assign(this, options);
+    constructor(options: Partial<ConfigOptions> = {}) {
+        assignPartial(this, options);
     }
 
     http_route = this.http_routeRoot + '/{container}/{*blob}';
