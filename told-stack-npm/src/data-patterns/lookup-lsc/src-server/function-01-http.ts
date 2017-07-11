@@ -1,6 +1,7 @@
 import { ServerConfigType, DataKey, FunctionTemplateConfig, UpdateRequestQueueMessage, ChangeData, LookupData, HttpFunction_BindingData } from "../src-config/server-config";
 import { HttpFunctionResponse, HttpFunctionRequest } from "../../../core/types/functions";
 import { readBlob } from "../../../core/utils/azure-storage-sdk/blobs";
+import { LookupResponse } from "../src-config/client-config";
 
 // Http Request: Handle Update Request
 // Table In: Read Old Lookup Blob Value
@@ -73,7 +74,10 @@ export async function runFunction(config: ServerConfigType, context: {
 
         // Return Old Lookup (Long TTL)
         context.res = {
-            body: lookup,
+            body: {
+                timeKey: lookup.timeKey,
+                timeToExpireSeconds: remainingTtl
+            } as LookupResponse,
             headers: {
                 'Content-Type': 'application/json',
                 'Cache-Control': `public, max-age=${remainingTtl}`
@@ -97,7 +101,10 @@ export async function runFunction(config: ServerConfigType, context: {
         context.log('Missing Lookup (First Time?)');
 
         context.res = {
-            body: { error: `Not Ready Yet: Try again in ${config.timePollSeconds} Seconds` },
+            body: {
+                error: `Not Ready Yet: Try again in ${config.timePollSeconds} Seconds`,
+                timeToExpireSeconds: config.timePollSeconds,
+            },
             headers: {
                 'Content-Type': 'application/json',
                 'Cache-Control': `public, max-age=${config.timeExtendSeconds}`,
@@ -121,7 +128,10 @@ export async function runFunction(config: ServerConfigType, context: {
     context.log('Return Old Lookup with Short TTL while Getting New Lookup and Value');
 
     context.res = {
-        body: lookup,
+        body: {
+            timeKey: lookup.timeKey,
+            timeToExpireSeconds: config.timeExtendSeconds,
+        } as LookupResponse,
         headers: {
             'Content-Type': 'application/json',
             'Cache-Control': `public, max-age=${config.timeExtendSeconds}`,

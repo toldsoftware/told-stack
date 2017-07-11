@@ -8,18 +8,18 @@ export class LookupLscTest extends RX.Component<{}, {
     obj: any,
 }>{
 
-    notifyUpdate = () => {
-        this.setState({
-            isWaitingForUpdate: false,
-        } as any);
+    notifyUpdate = async (data: any) => {
+        const obj = data;
 
-        // Infinite Update Loop
-        // setTimeout(this.download, 1 * 1000);
-        setTimeout(this.download);
+        this.setState({
+            hasStarted: true,
+            isWaitingForUpdate: false,
+            obj
+        });
     }
 
     download = async () => {
-        const obj = await lookupLscDataAccess.readAndUpdate({ blobName: 'test', containerName: 'test' }, this.notifyUpdate);
+        const obj = await lookupLscDataAccess.readAndUpdate({ blobName: 'test', containerName: 'test' }, { shouldAutoRefresh: true }, this.notifyUpdate);
 
         this.setState({
             hasStarted: true,

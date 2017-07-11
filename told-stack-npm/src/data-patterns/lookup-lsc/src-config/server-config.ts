@@ -76,11 +76,12 @@ export interface UpdateRequestQueueMessage extends DataKey {
 }
 
 export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
-    timeToLiveSeconds = 60;
+    timeToLiveSeconds = this.clientConfig.timeToLiveSeconds;
     get timeToLiveSeconds_downloadBlob() { return this.timeToLiveSeconds * 4 + 300; }
+    timePollSeconds = this.clientConfig.timePollSeconds;
+
     timeExtendSeconds = 1;
     timeExecutionSeconds = 10;
-    timePollSeconds = this.clientConfig.timePollSeconds;
 
     shouldGzip = this.clientConfig.shouldGzipDownloadBlob;
 

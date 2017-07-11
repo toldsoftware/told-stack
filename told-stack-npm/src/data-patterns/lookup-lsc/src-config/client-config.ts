@@ -7,9 +7,16 @@ export interface DataKey {
 
 export interface LookupData {
     timeKey: string
-};
+}
+
+export interface LookupResponse {
+    timeKey?: string;
+    error?: string;
+    timeToExpireSeconds: number;
+}
 
 export interface ClientConfigType {
+    timeToLiveSeconds: number;
     timePollSeconds: number;
     maxPollCount: number;
 
@@ -18,6 +25,7 @@ export interface ClientConfigType {
 }
 
 export interface ClientConfigOptions {
+    timeToLiveSeconds: number;
     timePollSeconds: number;
     maxPollCount: number;
     lookup_domain: string;
@@ -29,6 +37,7 @@ export interface ClientConfigOptions {
 export class ClientConfig implements ClientConfigType, ClientConfigOptions {
     timePollSeconds = 1;
     maxPollCount = 5;
+    timeToLiveSeconds = 60;
 
     lookup_domain = '/';
     lookup_route = 'api/lookup-lsc';

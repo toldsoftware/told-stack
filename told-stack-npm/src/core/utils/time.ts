@@ -1,7 +1,16 @@
 const ids: any[] = [];
 const CANCEL = -1;
 
-export function setInterval_exponentialBackoff(callback: () => void, timeMs = 1000, maxAttempts = 5, base = 2): number {
+export function setInterval_exponentialBackoff(callback: () => void, timeMs = 1000, options: {
+    maxAttempts?: number,
+    base?: number,
+    maxTime?: number,
+}): number {
+
+    const maxTime = options.maxTime;
+    const maxAttempts = options.maxAttempts || (!maxTime ? 5 : undefined);
+    const base = options.base || 2;
+
     const id = ids.length;
     ids.push(0);
 
@@ -13,10 +22,14 @@ export function setInterval_exponentialBackoff(callback: () => void, timeMs = 10
 
         attempt++;
 
-        if (attempt < maxAttempts) {
+        if (!maxAttempts || attempt < maxAttempts) {
+            const backoffTime = timeMs * Math.pow(base, attempt);
+            const actualTime = maxTime ? Math.min(maxTime, backoffTime) : backoffTime;
+            console.log('setInterval_exponentialBackoff', { actualTime, backoffTime, timeMs, maxTime, maxAttempts, base });
+
             ids[id] = setTimeout(() => {
                 call();
-            }, timeMs * Math.pow(base, attempt));
+            }, actualTime);
         }
     };
 
