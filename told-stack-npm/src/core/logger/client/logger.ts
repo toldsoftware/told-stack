@@ -25,18 +25,18 @@ export class Logger {
             this._hasSentSessionInfo = true;
 
             this._items.push({
+                isError: null,
                 category: 'Session',
                 event: 'Info',
                 data: null,
 
-                userInfo: this.getUserInfo(),
-                appContextInfo: this.getContextInfo(),
-                deviceInfo: this.getDeviceInfo(),
-
-                isError: undefined,
                 time: Date.now(),
                 runTime: Date.now() - this._startTime,
                 startTime: this._startTime,
+
+                userInfo: this.getUserInfo(),
+                appContextInfo: this.getContextInfo(),
+                deviceInfo: this.getDeviceInfo(),
             });
 
             this.sendBatch(true);
@@ -54,18 +54,18 @@ export class Logger {
     log(category: string, event: string, data: Object, shouldSendImmediately = false, isError = false) {
 
         const d: LogItem = {
+            isError: isError ? true : undefined,
             category,
             event,
             data,
 
-            userInfo: this.getUserInfo(),
-            appContextInfo: this.getContextInfo(),
-            deviceInfo: undefined,
-
-            isError,
             time: Date.now(),
             runTime: Date.now() - this._startTime,
             startTime: this._startTime,
+
+            userInfo: this.getUserInfo(),
+            appContextInfo: this.getContextInfo(),
+            deviceInfo: undefined,
         };
 
         this._items.push(d);

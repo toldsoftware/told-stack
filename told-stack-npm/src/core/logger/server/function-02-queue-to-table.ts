@@ -45,10 +45,16 @@ export async function runFunction(config: ServerConfigType, context: {
 }) {
     context.log('START', { insertionTime: context.bindingData.insertionTime, itemsLength: context.bindings.inLogQueue.items.length });
 
-    context.bindings.outLogTable = context.bindings.inLogQueue.items.map(x => ({
+    const ip = context.bindings.inLogQueue.ip;
+    const userAgent = context.bindings.inLogQueue.userAgent;
+    const requestInfo = context.bindings.inLogQueue.requestInfo;
+    context.bindings.outLogTable = context.bindings.inLogQueue.items.map((x, i) => ({
         PartitionKey: config.getPartitionKey(x),
         RowKey: config.getRowKey(x),
+        ip: i === 0 ? ip : undefined,
         ...x,
+        // userAgent: i === 0 ? userAgent : undefined,
+        requestInfo: i === 0 ? requestInfo : undefined,
     }));
 
     context.log('DONE');

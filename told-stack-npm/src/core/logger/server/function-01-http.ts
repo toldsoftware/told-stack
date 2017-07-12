@@ -1,4 +1,4 @@
-import { HttpFunctionRequest, HttpFunctionResponse } from "../../types/functions";
+import { HttpFunctionRequest, HttpFunctionResponse, HttpFunctionRequest_ClientInfo } from "../../types/functions";
 import { FunctionTemplateConfig, ServerConfigType, HttpFunction_BindingData, LogQueueMessage } from "../config/server-config";
 import { LogItem } from "../config/types";
 
@@ -77,7 +77,26 @@ export async function runFunction(config: ServerConfigType, context: {
     context.log(`Received ${items.length} log items`);
 
     // if (JSON.stringify(items).length < this.config.maxQueueSize) {
-    context.bindings.outLogQueue = { items };
+    const c = req as any as HttpFunctionRequest_ClientInfo;
+    const requestInfo = items.some(x => !!x.deviceInfo) ? {
+        originalUrl: c.originalUrl,
+        method: c.method,
+        query: c.query,
+        headers: c.headers
+    } : undefined;
+
+    const clientInfo = {
+        ip: c.headers['x-forwarded-for'],
+        userAgent: c.headers['user-agent'],
+    };
+
+    context.bindings.outLogQueue = {
+        items,
+        ip: clientInfo.ip,
+        userAgent: clientInfo.userAgent,
+        requestInfo,
+    };
+
     context.log(`Stored in Queue`);
     // } else {
     //     context.bindings.outLogOversizeBlob = { items };

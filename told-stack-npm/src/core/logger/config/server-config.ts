@@ -2,6 +2,7 @@ import { LogItem } from "./types";
 import { ClientConfig } from "./client-config";
 import { leftPad } from "../../utils/left-pad";
 import { randHex } from "../../utils/rand";
+import { HttpFunctionRequest_ClientInfo } from "../../types/functions";
 
 export interface FunctionTemplateConfig {
     storageConnection: string;
@@ -25,6 +26,9 @@ export interface HttpFunction_BindingData {
 
 export interface LogQueueMessage {
     items: LogItem[];
+    ip: string;
+    userAgent: string;
+    requestInfo?: HttpFunctionRequest_ClientInfo;
 }
 
 export interface ServerConfigType {

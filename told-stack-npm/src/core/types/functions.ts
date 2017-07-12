@@ -14,3 +14,19 @@ export interface HttpResponseOptions {
     contentType?: string;
     contentEncoding?: string;
 }
+
+export interface HttpFunctionRequest_ClientInfo {
+    originalUrl: string;
+    method: string;
+    query: string;
+    headers: {
+        [name: string]: string;
+
+        host: string;
+        origin: string;
+        referer: string;
+        ['user-agent']: string;
+        // Client IP
+        ['x-forwarded-for']: string;
+    };
+}
