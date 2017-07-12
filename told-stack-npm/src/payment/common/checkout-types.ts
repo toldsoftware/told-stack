@@ -34,27 +34,27 @@ export interface CheckoutOptions {
 
 export enum CheckoutStatus {
     // Nothing has happened yet
-    NotStarted,
+    NotStarted = 'NotStarted',
     // The user has clicked the open button and is opening
-    Started,
+    Started = 'Started',
     // The form has called the opened callback
-    Opened,
+    Opened = 'Opened',
     // The form has called the closed callback (Caneelled)
-    Closed,
+    Closed = 'Closed',
     // The user has submitted and the provider is verifying the information 
-    Verifing,
+    Verifing = 'Verifing',
     // The payment was sent to the server
-    Submitting,
+    Submitting = 'Submitting',
     // The payment is being processed on the server
-    Processing,
+    Processing = 'Processing',
     // The payment was made successfully
-    Success,
+    Success = 'Success',
     // The payment failed (Try Again)
-    PaymentFailed,
+    PaymentFailed = 'PaymentFailed',
     // The payment succeeded but the processing failed (Customer Support)
-    ProcessingFailed,
+    ProcessingFailed = 'ProcessingFailed',
     // The payment process was not found
-    NotFound,
+    NotFound = 'NotFound',
 }
 
 export type CheckoutProcessOpen = (options: Partial<CheckoutOptions>) => void;

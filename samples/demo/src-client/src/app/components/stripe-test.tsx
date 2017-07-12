@@ -52,7 +52,7 @@ export class StripeTest extends RX.Component<{}, {
                 >Checkout</RX.Button>
                 {this.state.result && (
                     <RX.View>
-                        <RX.Text>status: {CheckoutStatus[this.state.result.status]}</RX.Text>
+                        <RX.Text>status: {this.state.result.status}</RX.Text>
                         <RX.Text>checkoutId: {this.state.result.checkoutId}</RX.Text>
                         <RX.Text>timeChanged: {this.state.result.timeChanged}</RX.Text>
                     </RX.View>
