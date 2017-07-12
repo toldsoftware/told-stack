@@ -7,6 +7,7 @@ export interface HttpFunctionResponse {
     status?: number;
     body?: any;
     headers?: { [name: string]: string }
+    isRaw?: boolean;
 }
 
 export interface HttpResponseOptions {

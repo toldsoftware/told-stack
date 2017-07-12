@@ -45,6 +45,7 @@ export function runFunction(config: HttpFunction_Config, context: {
     const data = context.bindings.inInputBlob;
     context.log('http-input-blob', data);
     context.res = {
+        isRaw: true,
         body: data,
         headers: {
             'Content-Type': config.responseOptions.contentType || 'application/json',

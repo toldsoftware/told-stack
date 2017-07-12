@@ -19,9 +19,9 @@ export interface FunctionTemplateConfig {
 }
 
 export interface HttpFunction_BindingData {
-    // Nothing here
-    DateTime: string;
-    ['rand-guid']: string;
+    // Doesn't work
+    // DateTime: string;
+    // ['rand-guid']: string;
 }
 
 export interface LogQueueMessage {
