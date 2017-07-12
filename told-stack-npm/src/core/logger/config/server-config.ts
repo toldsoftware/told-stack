@@ -16,6 +16,14 @@ export interface FunctionTemplateConfig {
     logTable_tableName_fromQueueTrigger: string;
     // logTable_partitionKey_fromQueueTrigger: string;
     // logTable_rowKey_fromQueueTrigger: string;
+
+    sessionLookupTable_tableName_fromQueueTrigger: string;
+    sessionLookupTable_partitionKey_fromQueueTrigger: string;
+    sessionLookupTable_rowKey_fromQueueTrigger: string;
+
+    userLookupTable_tableName_fromQueueTrigger: string;
+    userLookupTable_partitionKey_fromQueueTrigger: string;
+    userLookupTable_rowKey_fromQueueTrigger: string;
 }
 
 export interface HttpFunction_BindingData {
@@ -26,8 +34,13 @@ export interface HttpFunction_BindingData {
 
 export interface LogQueueMessage {
     items: LogItem[];
+
+    sessionId: string;
+    userId: string;
+
     ip: string;
     userAgent: string;
+
     requestInfo?: HttpFunctionRequest_ClientInfo;
 }
 
@@ -58,6 +71,14 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
     logTable_tableName_fromQueueTrigger = `log`;
     // logTable_partitionKey_fromQueueTrigger = `{}`;
     // logTable_rowKey_fromQueueTrigger = ``;
+
+    sessionLookupTable_tableName_fromQueueTrigger = `sessionuserlookup`;
+    sessionLookupTable_partitionKey_fromQueueTrigger = `session-user-lookup`;
+    sessionLookupTable_rowKey_fromQueueTrigger = `{sessionId}`;
+
+    userLookupTable_tableName_fromQueueTrigger = `sessionuserlookup`;
+    userLookupTable_partitionKey_fromQueueTrigger = `user-session-lookup`;
+    userLookupTable_rowKey_fromQueueTrigger = `{userId}`;
 
     constructor(
         private clientConfig: ClientConfig,

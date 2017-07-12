@@ -18,11 +18,11 @@ export class SessionId {
 export function createSessonId() {
     const iso = (new Date()).toISOString();
     const rand = randHex(16);
-    return `${iso}_${rand}`;
+    return `s_${iso}_${rand}`;
 }
 
 export function createUserId_anonymous() {
     const iso = (new Date()).toISOString();
     const rand = randHex(16);
-    return `anon_${iso}_${rand}`;
+    return `u_anon_${iso}_${rand}`;
 }

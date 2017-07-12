@@ -1,6 +1,7 @@
 import { HttpFunctionRequest, HttpFunctionResponse, HttpFunctionRequest_ClientInfo } from "../../types/functions";
 import { FunctionTemplateConfig, ServerConfigType, HttpFunction_BindingData, LogQueueMessage } from "../config/server-config";
 import { LogItem } from "../config/types";
+import { group, groupToArray } from "../../utils/objects";
 
 export function createFunctionJson(config: FunctionTemplateConfig) {
     return {
@@ -49,7 +50,7 @@ export async function runFunction(config: ServerConfigType, context: {
     res: HttpFunctionResponse,
     bindingData: HttpFunction_BindingData,
     bindings: {
-        outLogQueue: LogQueueMessage,
+        outLogQueue: LogQueueMessage | LogQueueMessage[],
         outLogOversizeQueue: string,
         outLogOversizeBlob: LogQueueMessage,
     }
@@ -90,12 +91,16 @@ export async function runFunction(config: ServerConfigType, context: {
         userAgent: c.headers['user-agent'],
     };
 
-    context.bindings.outLogQueue = {
-        items,
+    const groupByUserId = groupToArray(items, x => x.userInfo.userId);
+
+    context.bindings.outLogQueue = groupByUserId.map(g => ({
+        items: g,
+        sessionId: items[0].userInfo.sessionId || '',
+        userId: items[0].userInfo.userId || '',
         ip: clientInfo.ip,
         userAgent: clientInfo.userAgent,
         requestInfo,
-    };
+    }));
 
     context.log(`Stored in Queue`);
     // } else {
