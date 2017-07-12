@@ -23,7 +23,7 @@
     "typescript": "^2.4.1",
     "webpack": "^3.0.0"
   },
-  "peerDependencies": {
+  "dependencies": {
     "azure-storage": "^2.2.1",
     "node-fetch": "^1.7.1",
     "zen-observable": "^0.5.2"

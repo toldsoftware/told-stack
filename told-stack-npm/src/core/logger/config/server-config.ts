@@ -1,4 +1,5 @@
 import { LogItem } from "./types";
+import { ClientConfig } from "./client-config";
 
 export interface FunctionTemplateConfig {
     storageConnection: string;
@@ -6,8 +7,12 @@ export interface FunctionTemplateConfig {
     http_route: string;
 
     logQueue_queueName: string;
-    logOversizeQueue_queueName: string;
-    logOversizeBlob_path: string;
+    // logOversizeQueue_queueName: string;
+    // logOversizeBlob_path: string;
+
+    logTable_tableName_fromQueueTrigger: string;
+    logTable_partitionKey_fromQueueTrigger: string;
+    logTable_rowKey_fromQueueTrigger: string;
 }
 
 export interface HttpFunction_BindingData {
@@ -21,24 +26,34 @@ export interface LogQueueMessage {
 }
 
 export interface ServerConfigType {
-    getLogOversizeBlobName(bindingData: HttpFunction_BindingData): string;
+    // getLogOversizeBlobName(bindingData: HttpFunction_BindingData): string;
 }
 
-export class ServerConfig implements ServerConfigType {
+export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
 
     storageConnection = this.default_storageConnectionString_AppSettingName;
+
+    http_route = this.clientConfig.sendLog_route;
+
     logQueue_queueName = 'log';
-    logOversizeQueue_queueName = 'log-oversize';
-    logOversizeBlob_path = `log-oversize/{DateTime}_{rand-guid}.json`;
+    // logOversizeQueue_queueName = 'log-oversize';
+    // logOversizeBlob_path = `log-oversize/{DateTime}_{rand-guid}.json`;
 
-    getLogOversizeBlobName(bindingData: HttpFunction_BindingData) {
-        return this.logOversizeBlob_path
-            .replace('{DateTime}', bindingData.DateTime)
-            .replace('{rand-guid}', bindingData['rand-guid'])
-            ;
-    }
+    // getLogOversizeBlobName(bindingData: HttpFunction_BindingData) {
+    //     return this.logOversizeBlob_path
+    //         .replace('{DateTime}', bindingData.DateTime)
+    //         .replace('{rand-guid}', bindingData['rand-guid'])
+    //         ;
+    // }
 
-    constructor(private default_storageConnectionString_AppSettingName: string) {
+    logTable_tableName_fromQueueTrigger = ``;
+    logTable_partitionKey_fromQueueTrigger = ``;
+    logTable_rowKey_fromQueueTrigger = ``;
+
+    constructor(
+        private clientConfig: ClientConfig,
+        private default_storageConnectionString_AppSettingName = 'AZURE_STORAGE_CONNECTION_STRING',
+    ) {
 
     }
 

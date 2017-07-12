@@ -4,16 +4,8 @@ export interface UserInfo {
     userId: string;
 }
 
-export interface UserInfoProvider {
-    getUserInfo(): UserInfo;
-}
-
 export interface AppContextInfo {
     path: string;
-}
-
-export interface AppContextInfoProvider {
-    getContextInfo(): AppContextInfo;
 }
 
 export interface DeviceInfo {
@@ -22,11 +14,9 @@ export interface DeviceInfo {
     userAgent: string;
 }
 
-export interface DeviceInfoProvider {
-    getDeviceInfo(): DeviceInfo;
-}
-
 export interface LogItem {
+    _attempts?: number;
+
     category: string;
     event: string;
     data: any;
@@ -34,8 +24,10 @@ export interface LogItem {
     isError: boolean;
     time: number;
     runTime: number;
+    startTime: number;
 
     userInfo: UserInfo;
     appContextInfo: AppContextInfo;
     deviceInfo?: DeviceInfo;
+
 }

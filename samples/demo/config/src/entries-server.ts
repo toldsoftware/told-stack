@@ -4,6 +4,8 @@ declare const require : any;
 export const requireCallback = (p: string) => require(p);
 
 export const entries: EntryInfo[] = [
+    { name: 'logger', import: '@told/stack/src/core/logger/server/function-01-http', configImport: './core/logger-server' },
+    
     { name: 'http-echo', import: '@told/stack/src/tools/http-echo/src-server/function-01-http', configImport: './http/http-echo' },
 
     { name: 'http-early-response', import: '@told/stack/src/data-patterns/experiments/http-early-response/src-server/function-01-http', configImport: './http/http-early-response' },
