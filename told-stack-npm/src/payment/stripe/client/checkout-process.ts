@@ -1,24 +1,29 @@
 import { Observable, Observer } from "../../../core/utils/observable";
 import { CheckoutProcess, CheckoutOptions, CheckoutResult, CheckoutProcessPrepareResult, CheckoutStatus } from '../../common/checkout-types';
-import { ClientConfig } from "../config/client-config";
+import { ClientConfig, ClientRuntimeOptions } from "../config/client-config";
 import { StripeCheckoutAccess, StripeToken, StripeTokenArgs } from "./stripe-checkout-access";
 import { assignPartial } from "../../../core/utils/objects";
 import { uuid } from "../../../core/utils/uuid";
 
 export class StripeCheckoutProcess implements CheckoutProcess {
 
-    _access: StripeCheckoutAccess;
+    private _access: StripeCheckoutAccess;
 
-    constructor(private config: ClientConfig) {
+    constructor(private config: ClientConfig, private runtime: ClientRuntimeOptions) {
 
     }
 
     prepare = async (): Promise<CheckoutProcessPrepareResult> => {
+        console.log('StripeCheckoutProcess START');
+
         if (!this._access) {
             this._access = new StripeCheckoutAccess(this.config.stripePublishableKey);
         }
 
+        console.log('StripeCheckoutProcess Prepare Stripe Access');
         await this._access.prepare();
+
+        console.log('StripeCheckoutProcess Setup Result Observer');
         const checkoutId = uuid.v4();
 
         let observer: Observer<CheckoutResult>;
@@ -29,18 +34,22 @@ export class StripeCheckoutProcess implements CheckoutProcess {
         };
 
         const updateResult = (result: Partial<CheckoutResult>) => {
+            console.log('StripeCheckoutProcess updateResult', { result });
+
             if (result.checkoutId && result.checkoutId !== lastResult.checkoutId) {
                 throw 'StripeCheckoutProcess: Cannot change checkoutId';
             }
 
             assignPartial(lastResult, result);
-            result.checkoutId = checkoutId;
-            result.timeChanged = Date.now();
+            lastResult.checkoutId = checkoutId;
+            lastResult.timeChanged = Date.now();
+            observer.next(lastResult);
 
-            this.config.logCheckoutEvent('ResultChange', lastResult);
+            this.runtime.logCheckoutEvent('ResultChange', lastResult);
         }
 
         const result = new Observable<CheckoutResult>(o => {
+            console.log('StripeCheckoutProcess Observable START');
             observer = o;
         });
 
@@ -82,9 +91,11 @@ export class StripeCheckoutProcess implements CheckoutProcess {
                 },
             });
 
-            this.config.logCheckoutEvent('Open', { checkoutId, openOptions: options, configOptions: this.config.checkoutOptions });
+            this.runtime.logCheckoutEvent('Open', { checkoutId, openOptions: options, configOptions: this.config.checkoutOptions });
             updateResult({ status: CheckoutStatus.Started });
         };
+
+        console.log('StripeCheckoutProcess DONE');
 
         return {
             open,

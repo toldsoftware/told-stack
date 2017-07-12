@@ -57,7 +57,7 @@ export async function runFunction(config: ServerConfigType, context: {
     context.log('START');
 
     // Handle Max Queue Size (64kb) -> Put in a blob
-    const items = req.body as LogItem[];
+    const items = JSON.parse(req.body) as LogItem[];
 
     if (!items) {
         context.res = {

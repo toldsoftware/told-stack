@@ -38,16 +38,16 @@ export async function runFunction(config: ServerConfigType, context: {
     },
     bindings: {
         inLogQueue: LogQueueMessage,
-        outLogTable: LogItem & { PartitionKey: string, RowKey: string }[],
+        outLogTable: (LogItem & { PartitionKey: string, RowKey: string })[],
     }
 }) {
     context.log('START', { insertionTime: context.bindingData.insertionTime, itemsLength: context.bindings.inLogQueue.items.length });
 
-    context.bindings.outLogTable.push(...context.bindings.inLogQueue.items.map(x => ({
+    context.bindings.outLogTable = context.bindings.inLogQueue.items.map(x => ({
         PartitionKey: `${x.startTime}_${x.userInfo.sessionId}`,
-        RowKey: x.userInfo.userId,
+        RowKey: `${x.userInfo.userId}_${x.time}_${Math.random()}`,
         ...x,
-    })));
+    }));
 
     context.log('DONE');
     context.done();

@@ -11,8 +11,8 @@ export interface FunctionTemplateConfig {
     // logOversizeBlob_path: string;
 
     logTable_tableName_fromQueueTrigger: string;
-    logTable_partitionKey_fromQueueTrigger: string;
-    logTable_rowKey_fromQueueTrigger: string;
+    // logTable_partitionKey_fromQueueTrigger: string;
+    // logTable_rowKey_fromQueueTrigger: string;
 }
 
 export interface HttpFunction_BindingData {
@@ -46,9 +46,9 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
     //         ;
     // }
 
-    logTable_tableName_fromQueueTrigger = ``;
-    logTable_partitionKey_fromQueueTrigger = ``;
-    logTable_rowKey_fromQueueTrigger = ``;
+    logTable_tableName_fromQueueTrigger = `log`;
+    // logTable_partitionKey_fromQueueTrigger = `{}`;
+    // logTable_rowKey_fromQueueTrigger = ``;
 
     constructor(
         private clientConfig: ClientConfig,

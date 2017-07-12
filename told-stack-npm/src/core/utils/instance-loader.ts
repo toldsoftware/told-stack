@@ -21,22 +21,32 @@ export class InstanceLoader<T> {
         return new Promise<T>((resolve, reject) => {
             if (this._instance) { return resolve(this._instance); }
 
-            if (this._isLoading) {
-                return this._resolves.push(resolve);
-            }
+            this._resolves.push(resolve);
+
+            if (this._isLoading) { return; }
             this._isLoading = true;
 
+            console.log('InstanceLoader START');
+
             this._load().then(x => {
+                console.log('InstanceLoader LOADED');
+
                 this._instance = x;
-                this._resolves.forEach(r => {
-                    try {
-                        r(x);
-                    } catch (err) {
-                        console.error('InstanceLoader: A resolver threw an uncaught error', { err });
-                    }
+
+                const resolves = this._resolves;
+                this._resolves = null;
+
+                resolves.forEach(r => {
+                    setTimeout(() => {
+                        try {
+                            r(x);
+                        } catch (err) {
+                            console.error('InstanceLoader: A resolver threw an uncaught error', { err });
+                        }
+                    });
                 });
 
-                this._resolves = null;
+                console.log('InstanceLoader DONE');
             });
 
         });

@@ -57,8 +57,10 @@ export enum CheckoutStatus {
     NotFound,
 }
 
+export type CheckoutProcessOpen = (options: Partial<CheckoutOptions>) => void;
+
 export interface CheckoutProcessPrepareResult {
-    open: (options: CheckoutOptions) => void;
+    open: CheckoutProcessOpen;
     result: Observable<CheckoutResult>;
 }
 
