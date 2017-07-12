@@ -5,13 +5,12 @@ export interface UserInfo {
 }
 
 export interface AppContextInfo {
+    version: string;
     path: string;
 }
 
 export interface DeviceInfo {
-    platform: 'web' | 'ios' | 'android' | 'other';
-    appVersion: string;
-    userAgent: string;
+    deviceInfo: any;
 }
 
 export interface LogItem {

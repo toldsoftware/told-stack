@@ -1,5 +1,7 @@
 import { LogItem } from "./types";
 import { ClientConfig } from "./client-config";
+import { leftPad } from "../../utils/left-pad";
+import { randHex } from "../../utils/rand";
 
 export interface FunctionTemplateConfig {
     storageConnection: string;
@@ -27,6 +29,9 @@ export interface LogQueueMessage {
 
 export interface ServerConfigType {
     // getLogOversizeBlobName(bindingData: HttpFunction_BindingData): string;
+
+    getPartitionKey(item: LogItem): string;
+    getRowKey(item: LogItem): string;
 }
 
 export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
@@ -57,4 +62,11 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
 
     }
 
+    getPartitionKey(item: LogItem) {
+        return `${item.userInfo.sessionId}`;
+    }
+
+    getRowKey(item: LogItem) {
+        return `${item.userInfo.userId}_t-${leftPad(item.runTime, 10, '-')}_r-${randHex(4)}`;
+    }
 }

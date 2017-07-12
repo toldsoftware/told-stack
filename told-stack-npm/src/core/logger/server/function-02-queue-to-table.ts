@@ -1,6 +1,8 @@
 import { FunctionTemplateConfig, ServerConfigType, LogQueueMessage } from "../config/server-config";
 import { insertOrMergeTableRow_sdk } from "../../../core/utils/azure-storage-binding/tables-sdk";
 import { LogItem } from "../config/types";
+import { randHex } from "../../utils/rand";
+import { leftPad } from "../../utils/left-pad";
 
 // Queue Trigger: Update Request Queue
 // Table In-Out: Changing Blob Singleton Check
@@ -44,8 +46,8 @@ export async function runFunction(config: ServerConfigType, context: {
     context.log('START', { insertionTime: context.bindingData.insertionTime, itemsLength: context.bindings.inLogQueue.items.length });
 
     context.bindings.outLogTable = context.bindings.inLogQueue.items.map(x => ({
-        PartitionKey: `${x.startTime}_${x.userInfo.sessionId}`,
-        RowKey: `${x.userInfo.userId}_${x.time}_${Math.random()}`,
+        PartitionKey: config.getPartitionKey(x),
+        RowKey: config.getRowKey(x),
         ...x,
     }));
 

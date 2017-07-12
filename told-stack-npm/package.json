@@ -24,8 +24,8 @@
     "webpack": "^3.0.0"
   },
   "dependencies": {
+    "zen-observable": "^0.5.2",
     "azure-storage": "^2.2.1",
-    "node-fetch": "^1.7.1",
-    "zen-observable": "^0.5.2"
+    "node-fetch": "^1.7.1"
   }
 }

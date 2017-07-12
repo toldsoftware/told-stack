@@ -64,7 +64,9 @@ export function groupToArray<T>(items: T[], getKey: (x: T) => string) {
 
 export function assignPartial<T>(t: T, p: Partial<T>): T {
     for (let k in p) {
-        t[k] = p[k];
+        if (p.hasOwnProperty(k)) {
+            t[k] = p[k];
+        }
     }
 
     return t;
