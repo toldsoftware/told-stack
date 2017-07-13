@@ -92,6 +92,7 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
     }
 
     getRowKey(item: LogItem) {
-        return `${item.userInfo.userId}_t-${leftPad(item.runTime, 10, '-')}_r-${randHex(4)}`;
+        // Avoid Collisions in case of bot using replay values (add Random and Date)
+        return `${item.userInfo.userId}_t-${leftPad(item.runTime, 10, '-')}_r-${randHex(8)}_d-${Date.now()}`;
     }
 }

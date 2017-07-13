@@ -3,11 +3,21 @@ import { Observable } from "../../core/utils/observable";
 export interface CheckoutBusinessOptions {
     name: string;
     imageUrl: string;
+    statementDescriptor: string;
 }
 
 export interface CheckoutProductOptions {
+    productCode: string;
+
     amountCents: number;
+    monthlyAmountCents: number;
+
     description: string;
+    subscriptionPlanName: string;
+    subscriptionPlanId_noPrice: string;
+
+    statementDescriptor: string;
+    statementDescriptor_subscription: string;
 }
 
 export interface CheckoutUserOptions {
@@ -39,23 +49,53 @@ export enum CheckoutStatus {
     Started = 'Started',
     // The form has called the opened callback
     Opened = 'Opened',
-    // The form has called the closed callback (Caneelled)
+    // The form has called the closed callback (Cancelled, Failed Verification?)
     Closed = 'Closed',
-    // The user has submitted and the provider is verifying the information 
-    Verifing = 'Verifing',
+
+    // // NOT SURE IF THESE CAN BE USED
+    // // The user has submitted and the provider is verifying the information 
+    // Verifing = 'Verifing',
+    // // The payment failed (Try Again)
+    // VerificationFailed = 'VerificationFailed',
+
     // The payment was sent to the server
     Submitting = 'Submitting',
+
     // The payment is being processed on the server
-    Processing = 'Processing',
-    // The payment was made successfully
-    Success = 'Success',
+    ProcessingQueued = 'ProcessingQueued',
+
+    // The payment has deqeued and the token is being sent to Stripe
+    ProcessingPayment = 'ProcessingPayment',
+
+    // The Customer was Created on Stripe
+    ProcessingPaymentCustomerCreated = 'ProcessingPaymentCustomerCreated',
+    // The Charge was Made on Stripe
+    ProcessingPaymentSuceeded = 'ProcessingPaymentSuceeded',
+
     // The payment failed (Try Again)
-    PaymentFailed = 'PaymentFailed',
+    ProcessingPaymentFailed = 'ProcessingPaymentFailed',
+
+    // The payment is being processed on the server
+    ProcessingExecuting = 'ProcessingExecuting',
+    // The payment was made successfully
+    ProcessingSucceeded = 'ProcessingSucceeded',
+
     // The payment succeeded but the processing failed (Customer Support)
-    ProcessingFailed = 'ProcessingFailed',
-    // The payment process was not found
-    NotFound = 'NotFound',
+    ProcessingExecutionFailed = 'ProcessingExecutionFailed',
+
+    // TODO: PaymentRefunded
+    PaymentRefunded = 'PaymentRefunded',
 }
+
+export enum SubscriptionStatus {
+    NotStarted = 'NotStarted',
+    Subscribing = 'Subscribing',
+    TrialPeriod = 'TrialPeriod',
+    Subscribed = 'Subscribed',
+    PaymentFailed = 'PaymentFailed',
+    Cancelled = 'Cancelled',
+}
+
 
 export type CheckoutProcessOpen = (options: Partial<CheckoutOptions>) => void;
 
@@ -65,9 +105,11 @@ export interface CheckoutProcessPrepareResult {
 }
 
 export interface CheckoutResult {
-    checkoutId: string;
+    serverCheckoutId: string;
+    clientCheckoutId: string;
     status: CheckoutStatus;
     timeChanged: number;
+    error?: string;
 }
 
 export interface CheckoutProcess {

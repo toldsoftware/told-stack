@@ -3,11 +3,14 @@ export interface HttpFunctionRequest {
     body: any;
 }
 
-export interface HttpFunctionResponse {
+export interface HttpFunctionResponseTyped<T> {
     status?: number;
-    body?: any;
+    body?: T;
     headers?: { [name: string]: string }
     isRaw?: boolean;
+}
+
+export interface HttpFunctionResponse extends HttpFunctionResponseTyped<any> {
 }
 
 export interface HttpResponseOptions {

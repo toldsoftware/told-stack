@@ -15,6 +15,7 @@
   "license": "MIT",
   "devDependencies": {
     "@types/node-fetch": "^1.6.7",
+    "@types/stripe-node": "^4.6.6",
     "@types/webpack": "^3.0.1",
     "@types/zen-observable": "^0.5.1",
     "awesome-typescript-loader": "^3.2.1",
@@ -24,8 +25,9 @@
     "webpack": "^3.0.0"
   },
   "dependencies": {
-    "zen-observable": "^0.5.2",
     "azure-storage": "^2.2.1",
-    "node-fetch": "^1.7.1"
+    "node-fetch": "^1.7.1",
+    "stripe": "^4.23.1",
+    "zen-observable": "^0.5.2"
   }
 }
