@@ -1,6 +1,6 @@
 import { FunctionTemplateConfig, ServerConfigType, DataKey, UpdateRequestQueueMessage, ChangeData, LookupData } from "../src-config/server-config";
 import { gzipText } from "../../../core/utils/gzip";
-import { insertOrMergeTableRow_sdk } from "../../../core/utils/azure-storage-binding/tables-sdk";
+import { insertOrMergeTableEntity_sdk } from "../../../core/utils/azure-storage-binding/tables-sdk";
 import { writeBlobBuffer } from "../../../core/utils/azure-storage-sdk/blobs";
 
 // Queue Trigger: Update Request Queue
@@ -103,7 +103,7 @@ export async function runFunction(config: ServerConfigType, context: {
 
     context.log('Update Lookup Table');
     // context.bindings.outLookupTable = { startTime: context.bindings.inUpdateExecuteQueue.startTime };
-    context.bindings.outLookupTable = await insertOrMergeTableRow_sdk(config.getLookupTableRowKey_fromQueueTrigger(context.bindings.inUpdateExecuteQueue),
+    context.bindings.outLookupTable = await insertOrMergeTableEntity_sdk(config.getLookupTableRowKey_fromQueueTrigger(context.bindings.inUpdateExecuteQueue),
         context.bindings.inLookupTable, { timeKey: context.bindings.inUpdateExecuteQueue.timeKey } as LookupData);
 
     context.log('DONE');

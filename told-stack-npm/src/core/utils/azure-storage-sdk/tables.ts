@@ -1,17 +1,37 @@
-import { createTableService, TableService, TableUtilities, TableQuery } from "azure-storage";
+import { createTableService, TableService, TableUtilities, TableQuery, ErrorOrResult } from "azure-storage";
 import { asyncIt } from "./async-it";
+
+const FORCE_LOWER_CASE = false;
 
 const entGen = TableUtilities.entityGenerator;
 
 export type EntityValueTypes = string | boolean | number | Date;
 export type EntityValues = { [key: string]: EntityValueTypes };
 
-export async function saveRow(tableName: string, partitionKey: string, rowKey: string, values: EntityValues, ...aliases: string[]) {
+export async function doesEntityExist(tableName: string, partitionKey: string, rowKey: string) {
     const tableService = createTableService();
 
-    partitionKey = partitionKey.toLowerCase();
-    rowKey = rowKey.toLowerCase();
-    aliases = aliases.map(x => x.toLowerCase());
+    if (FORCE_LOWER_CASE) {
+        partitionKey = partitionKey.toLowerCase();
+        rowKey = rowKey.toLowerCase();
+    }
+
+    try {
+        const result = await asyncIt<any>(cb => tableService.retrieveEntity(tableName, partitionKey, rowKey, cb));
+        return true;
+    } catch (err) {
+        return false;
+    }
+}
+
+export async function saveEntity(tableName: string, partitionKey: string, rowKey: string, values: EntityValues, ...aliases: string[]) {
+    const tableService = createTableService();
+
+    if (FORCE_LOWER_CASE) {
+        partitionKey = partitionKey.toLowerCase();
+        rowKey = rowKey.toLowerCase();
+        aliases = aliases.map(x => x.toLowerCase());
+    }
 
     // Save Data
     const entity = convertToEntity(tableService, partitionKey, rowKey, values);
@@ -26,11 +46,13 @@ export async function saveRow(tableName: string, partitionKey: string, rowKey: s
     return result;
 }
 
-export async function loadRow(tableName: string, partitionKey: string, rowKeyOrAlias: string) {
+export async function loadEntity(tableName: string, partitionKey: string, rowKeyOrAlias: string) {
     const tableService = createTableService();
 
-    partitionKey = partitionKey.toLowerCase();
-    rowKeyOrAlias = rowKeyOrAlias.toLowerCase();
+    if (FORCE_LOWER_CASE) {
+        partitionKey = partitionKey.toLowerCase();
+        rowKeyOrAlias = rowKeyOrAlias.toLowerCase();
+    }
 
     try {
 
@@ -60,10 +82,12 @@ export async function loadRow(tableName: string, partitionKey: string, rowKeyOrA
     }
 }
 
-export async function loadRows(tableName: string, partitionKey: string, count: number) {
+export async function loadEntities(tableName: string, partitionKey: string, count: number) {
     const tableService = createTableService();
 
-    partitionKey = partitionKey.toLowerCase();
+    if (FORCE_LOWER_CASE) {
+        partitionKey = partitionKey.toLowerCase();
+    }
 
     try {
 

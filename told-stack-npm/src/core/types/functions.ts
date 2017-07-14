@@ -1,6 +1,7 @@
-export interface HttpFunctionRequest {
-    query: any;
-    body: any;
+export interface HttpFunctionRequest<B=any, Q=any> {
+    body: B;
+    query: Q;
+    headers?: { [name: string]: string }
 }
 
 export interface HttpFunctionResponseTyped<T> {

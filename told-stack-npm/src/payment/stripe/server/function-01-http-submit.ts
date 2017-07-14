@@ -26,13 +26,13 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
                 queueName: config.processQueue_queueName,
                 connection: config.storageConnection
             },
-            {
-                name: "outStripeCheckoutTable",
-                type: "table",
-                direction: "out",
-                tableName: config.stripeCheckoutTable_tableName,
-                connection: config.storageConnection
-            },
+            // {
+            //     name: "outStripeCheckoutTable",
+            //     type: "table",
+            //     direction: "out",
+            //     tableName: config.stripeCheckoutTable_tableName,
+            //     connection: config.storageConnection
+            // },
         ],
         disabled: false
     };
@@ -79,13 +79,13 @@ export async function runFunction(config: ServerConfigType, context: {
         serverCheckoutId,
     };
 
-    context.bindings.outStripeCheckoutTable = {
-        PartitionKey: config.getStripeCheckoutPartitionKey(emailHash, serverCheckoutId),
-        RowKey: config.getStripeCheckoutRowKey(emailHash, serverCheckoutId),
-        request,
-        status,
-        timeRequested: Date.now(),
-    };
+    // context.bindings.outStripeCheckoutTable = {
+    //     PartitionKey: config.getStripeCheckoutPartitionKey(emailHash, serverCheckoutId),
+    //     RowKey: config.getStripeCheckoutRowKey(emailHash, serverCheckoutId),
+    //     request,
+    //     status,
+    //     timeRequested: Date.now(),
+    // };
 
     context.log(`Stored in Queue`);
 

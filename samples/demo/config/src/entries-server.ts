@@ -1,15 +1,17 @@
 import { EntryInfo } from "@told/stack/src/core/types/entry";
 
-declare const require : any;
+declare const require: any;
 export const requireCallback = (p: string) => require(p);
 
 export const entries: EntryInfo[] = [
-    
+
+    { name: 'ping-pong', import: '@told/stack/src/tools/ping-pong/server/ping-pong', configImport: './tools/ping-pong' },
+
     { name: 'http-static', import: '@told/stack/src/core/static/server/function-01-http', configImport: './core/static-server' },
-    
+
     { name: 'logger-01-http', import: '@told/stack/src/core/logger/server/function-01-http', configImport: './core/logger-server' },
     { name: 'logger-02-queue-to-table', import: '@told/stack/src/core/logger/server/function-02-queue-to-table', configImport: './core/logger-server' },
-    
+
     { name: 'http-echo', import: '@told/stack/src/tools/http-echo/src-server/function-01-http', configImport: './http/http-echo' },
 
     { name: 'http-early-response', import: '@told/stack/src/data-patterns/experiments/http-early-response/src-server/function-01-http', configImport: './http/http-early-response' },
@@ -27,5 +29,12 @@ export const entries: EntryInfo[] = [
     { name: 'lookup-lsc-02-update-request-queue', import: '@told/stack/src/data-patterns/lookup-lsc/src-server/function-02-update-request-queue', configImport: './lookup-lsc/server' },
     { name: 'lookup-lsc-03-update-execute-queue', import: '@told/stack/src/data-patterns/lookup-lsc/src-server/function-03-update-execute-queue', configImport: './lookup-lsc/server' },
     { name: 'lookup-lsc-04-http-download-blob', import: '@told/stack/src/data-patterns/lookup-lsc/src-server/function-04-http-download-blob', configImport: './lookup-lsc/server' },
-    
+
+    { name: 'stripe-checkout-01-http-submit', import: '@told/stack/src/payment/stripe/server/function-01-http-submit', configImport: './payment/stripe-server' },
+    { name: 'stripe-checkout-02-process', import: '@told/stack/src/payment/stripe/server/function-02-process', configImport: './payment/stripe-server' },
+    { name: 'stripe-checkout-03-http-status', import: '@told/stack/src/payment/stripe/server/function-03-http-status', configImport: './payment/stripe-server' },
+    { name: 'stripe-checkout-04-http-webhook', import: '@told/stack/src/payment/stripe/server/function-04-http-webhook', configImport: './payment/stripe-server' },
+    // { name: 'stripe-checkout-05-process-webhook', import: '@told/stack/src/payment/stripe/server/function-05-process-webhook', configImport: './payment/stripe-server' },
+
+
 ];

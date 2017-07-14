@@ -13,6 +13,7 @@ export interface ClientRuntimeOptions {
 export interface ClientConfigOptions {
     stripePublishableKey: string;
     checkoutOptions: Partial<CheckoutOptions>;
+    
     getSubmitTokenUrl(): string;
     getCheckoutStatusUrl(email: string, serverCheckoutId: string): string;
     getStripeChargeMetadata(options: CheckoutOptions): { [key: string]: string | number };

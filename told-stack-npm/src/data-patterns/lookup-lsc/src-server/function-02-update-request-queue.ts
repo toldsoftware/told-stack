@@ -1,5 +1,5 @@
 import { FunctionTemplateConfig, ServerConfigType, DataKey, UpdateRequestQueueMessage, ChangeData } from "../src-config/server-config";
-import { insertOrMergeTableRow_sdk } from "../../../core/utils/azure-storage-binding/tables-sdk";
+import { insertOrMergeTableEntity_sdk } from "../../../core/utils/azure-storage-binding/tables-sdk";
 
 // Queue Trigger: Update Request Queue
 // Table In-Out: Changing Blob Singleton Check
@@ -104,7 +104,7 @@ export async function runFunction(config: ServerConfigType, context: {
     context.log('Execute Update');
 
     // context.bindings.outChangeTable = { startTime: Date.now() };
-    context.bindings.outChangeTable = await insertOrMergeTableRow_sdk(config.getChangeTableRowKey_fromQueueTrigger(context.bindings.inUpdateRequestQueue),
+    context.bindings.outChangeTable = await insertOrMergeTableEntity_sdk(config.getChangeTableRowKey_fromQueueTrigger(context.bindings.inUpdateRequestQueue),
         context.bindings.inChangeTable,
         { changeTime: Date.now() } as ChangeData);
 

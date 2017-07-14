@@ -1,6 +1,7 @@
 import { ClientConfig, CheckoutSubmitRequestBody } from "./client-config";
 import { CheckoutStatus, SubscriptionStatus } from "../../common/checkout-types";
-import { Stripe, StripeCharge, StripeCustomer, StripePlan, StripeSubscription } from "./stripe";
+import { Stripe, StripeCharge, StripeCustomer, StripePlan, StripeSubscription, StripeEvent } from "./stripe";
+export { CheckoutSubmitRequestBody };
 
 export interface FunctionTemplateConfig {
     storageConnection: string;
@@ -10,6 +11,7 @@ export interface FunctionTemplateConfig {
     webhook_route: string;
 
     processQueue_queueName: string;
+    webhookQueue_queueName: string;
 
     stripeCheckoutTable_tableName: string;
     stripeCheckoutTable_partitionKey_fromTrigger: string;
@@ -50,12 +52,22 @@ export interface StripeCheckoutTable {
     error?: string;
 }
 
-export interface StripeWebhookRequestBody {
+export interface StripeWebhookData extends StripeEvent {
 
 }
 
-export interface ServerConfigType extends StripeCheckoutRuntimeOptions {
+export interface StripeWebhookRequestBody extends StripeWebhookData {
+
+}
+
+export interface StripeWebhookQueue {
+    body: StripeWebhookRequestBody;
+    stripeSignature: string;
+}
+
+export interface ServerConfigType extends StripeCheckoutRuntimeConfig {
     getStripeSecretKey(): string;
+    getStripeWebhookEndpointSecret(): string;
 
     getEmailHash(email: string): string;
 
@@ -64,7 +76,7 @@ export interface ServerConfigType extends StripeCheckoutRuntimeOptions {
     getStripeCheckoutRowKey(emailHash: string, serverCheckoutId: string): string;
 }
 
-export interface StripeCheckoutRuntimeOptions {
+export interface StripeCheckoutRuntimeConfig {
     processRequest: (request: CheckoutSubmitRequestBody) => Promise<void>;
 }
 
@@ -74,9 +86,10 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
 
     submit_route = this.clientConfig.submit_route;
     status_route = this.clientConfig.status_route;
-    webhook_route = 'api/stripe-webhook';
+    webhook_route = 'webhook/stripe';
 
     processQueue_queueName = 'stripe-checkout-request';
+    webhookQueue_queueName = 'stripe-webhook';
 
     stripeCheckoutTable_tableName = `stripe`;
     stripeCheckoutTable_partitionKey_fromTrigger = `{emailHash}`;
@@ -91,18 +104,23 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
     }
 
     constructor(
-        private runtimeOptions: StripeCheckoutRuntimeOptions,
         private clientConfig: ClientConfig,
+        private runtimeConfig: StripeCheckoutRuntimeConfig,
         private default_storageConnectionString_AppSettingName = 'AZURE_STORAGE_CONNECTION_STRING',
         private stripeSecretKey_AppSettingName = 'STRIPE_SECRET_KEY',
+        private stripeWebhookEndpointSecret_AppSettingName = 'STRIPE_WEBHOOK_ENDPOINT_SECRET',
     ) {
 
     }
 
     getEmailHash = this.clientConfig.getEmailHash;
-    processRequest = this.runtimeOptions.processRequest;
+    processRequest = this.runtimeConfig.processRequest;
 
     getStripeSecretKey() {
         return process.env[this.stripeSecretKey_AppSettingName];
+    }
+
+    getStripeWebhookEndpointSecret() {
+        return process.env[this.stripeWebhookEndpointSecret_AppSettingName];
     }
 }

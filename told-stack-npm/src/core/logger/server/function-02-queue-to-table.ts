@@ -1,5 +1,5 @@
 import { FunctionTemplateConfig, ServerConfigType, LogQueueMessage } from "../config/server-config";
-import { insertOrMergeTableRow_sdk } from "../../../core/utils/azure-storage-binding/tables-sdk";
+import { insertOrMergeTableEntity_sdk } from "../../../core/utils/azure-storage-binding/tables-sdk";
 import { LogItem } from "../config/types";
 import { randHex } from "../../utils/rand";
 import { leftPad } from "../../utils/left-pad";

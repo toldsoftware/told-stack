@@ -1,6 +1,6 @@
-import { FunctionTemplateConfig, ServerConfigType, ProcessQueue, StripeCheckoutTable } from "../config/server-config";
-import { insertOrMergeTableRow_sdk } from "../../../core/utils/azure-storage-binding/tables-sdk";
-import { saveRow } from "../../../core/utils/azure-storage-sdk/tables";
+import { FunctionTemplateConfig, ServerConfigType, ProcessQueue, StripeCheckoutTable, StripeCheckoutRuntimeConfig } from "../config/server-config";
+import { insertOrMergeTableEntity_sdk } from "../../../core/utils/azure-storage-binding/tables-sdk";
+import { saveEntity, doesEntityExist } from "../../../core/utils/azure-storage-sdk/tables";
 import { CheckoutStatus, SubscriptionStatus } from "../../common/checkout-types";
 import { Stripe } from "../config/stripe";
 
@@ -20,15 +20,15 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
                 queueName: config.processQueue_queueName,
                 connection: config.storageConnection
             },
-            // {
-            //     name: "inStripeCheckoutTable",
-            //     type: "table",
-            //     direction: "in",
-            //     tableName: config.stripeCheckoutTable_tableName,
-            //     partitionKey: config.stripeCheckoutTable_partitionKey_fromTrigger,
-            //     rowKey: config.stripeCheckoutTable_rowKey_fromTrigger,
-            //     connection: config.storageConnection
-            // },
+            {
+                name: "inStripeCheckoutTable",
+                type: "table",
+                direction: "in",
+                tableName: config.stripeCheckoutTable_tableName,
+                partitionKey: config.stripeCheckoutTable_partitionKey_fromTrigger,
+                rowKey: config.stripeCheckoutTable_rowKey_fromTrigger,
+                connection: config.storageConnection
+            },
             // {
             //     name: "outStripeCheckoutTable",
             //     type: "table",
@@ -45,13 +45,13 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
 
 export async function runFunction(config: ServerConfigType, context: {
     log: typeof console.log,
-    done: () => void,
+    done: (error?: any) => void,
     bindingData: {
         insertionTime: Date,
     },
     bindings: {
         inProcessQueue: ProcessQueue,
-        // inStripeCheckoutTable: StripeCheckoutTable,
+        inStripeCheckoutTable: StripeCheckoutTable,
         // outStripeCheckoutTable: StripeCheckoutTable,
     }
 }) {
@@ -59,18 +59,34 @@ export async function runFunction(config: ServerConfigType, context: {
 
 
     const q = context.bindings.inProcessQueue;
+
+    if (context.bindings.inStripeCheckoutTable) {
+        return context.done({ error: 'Entity Already Exists', q });
+    }
+
+    // Verify Entity Does not exist to Prevent Replay
+    // const exists = await doesEntityExist(
+    //     config.stripeCheckoutTable_tableName,
+    //     config.getStripeCheckoutPartitionKey(q.emailHash, q.serverCheckoutId),
+    //     config.getStripeCheckoutRowKey(q.emailHash, q.serverCheckoutId),
+    // );
+
+    // if (exists) {
+    //     return context.done({ error: 'Entity Already Exists', q });
+    // }
+
     const saveData = async (data: Partial<StripeCheckoutTable>) => {
         context.log('Processing', { status: data.status, data });
 
         // Log History
-        await saveRow(
+        await saveEntity(
             config.stripeCheckoutTable_tableName,
             config.getStripeCheckoutPartitionKey(q.emailHash, q.serverCheckoutId),
             `${config.getStripeCheckoutRowKey(q.emailHash, q.serverCheckoutId)}_at-${Date.now()}`,
             { ...data, isLog: true } as any);
 
         // Save Main
-        await saveRow(
+        await saveEntity(
             config.stripeCheckoutTable_tableName,
             config.getStripeCheckoutPartitionKey(q.emailHash, q.serverCheckoutId),
             config.getStripeCheckoutRowKey(q.emailHash, q.serverCheckoutId),
@@ -144,9 +160,8 @@ export async function runFunction(config: ServerConfigType, context: {
             error,
             timeFailed: Date.now(),
         });
-        context.log('ERROR');
-        context.done();
-        return;
+
+        return context.done({ message: 'ProcessingPaymentFailed', error });
     }
 
     try {
@@ -167,9 +182,8 @@ export async function runFunction(config: ServerConfigType, context: {
             error,
             timeFailed: Date.now(),
         });
-        context.log('ERROR');
-        context.done();
-        return;
+
+        return context.done({ message: 'ProcessingExecutionFailed', error });
     }
 
     context.log('DONE');

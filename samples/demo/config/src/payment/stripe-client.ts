@@ -5,7 +5,8 @@ export const clientConfig = new ClientConfig({
     checkoutOptions: {
         business: {
             name: 'Told Software',
-            imageUrl: 'https://toldstackdemo.blob.core.windows.net/images/ToldLogo128.png'
+            imageUrl: 'https://toldstackdemo.blob.core.windows.net/images/ToldLogo128.png',
+            statementDescriptor: 'ToldSoft',
         },
         requirements: {
             requireZipCode: true,
