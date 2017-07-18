@@ -1,93 +1,175 @@
-import { FunctionTemplateConfig, ServerConfigType, ProcessQueue, StripeCheckoutTable, StripeCheckoutRuntimeConfig, StripeCustomerLookupTable, StripeUserLookupTable } from "../config/server-config";
+import { FunctionTemplateConfig, ServerConfigType, ProcessQueue, StripeCheckoutTable, StripeCheckoutRuntimeConfig, StripeCustomerLookupTable, StripeUserLookupTable, processQueueTrigger } from "../config/server-config";
 import { SubscriptionStatus, PaymentStatus, DeliverableStatus } from "../../common/checkout-types";
 
-import { insertOrMergeTableEntity_sdk } from "../../../core/utils/azure-storage-binding/tables-sdk";
-import { saveEntity, doesEntityExist } from "../../../core/utils/azure-storage-sdk/tables";
-import { Stripe } from "../config/stripe";
+import { saveEntity as _saveEntity } from "../../../core/utils/azure-storage-sdk/tables";
+import { Stripe as _Stripe } from "../config/stripe";
+import { buildQueue, buildTable, build_createFunctionJson, build_runFunction_http, build_runFunction_common, buildFunction_common, buildQueueTrigger, buildBinding } from "../../../core/azure-functions/function-builder";
+
+export const deps = {
+    saveEntity: _saveEntity,
+    Stripe: _Stripe,
+};
+
+// // Queue Trigger: Update Request Queue
+// // Table In-Out: Changing Blob Singleton Check
+// // Queue Out: Update Execute Queue Only Once Per Stale Timeout
+
+// export function createFunctionJson(config: FunctionTemplateConfig) {
+//     return {
+//         bindings: [
+//             {
+//                 name: "inProcessQueue",
+//                 type: "queueTrigger",
+//                 direction: "in",
+//                 queueName: config.processQueue_queueName,
+//                 connection: config.storageConnection
+//             },
+//             {
+//                 name: "inStripeCheckoutTable",
+//                 type: "table",
+//                 direction: "in",
+//                 tableName: config.stripeCheckoutTable_tableName,
+//                 partitionKey: config.stripeCheckoutTable_partitionKey_fromTrigger,
+//                 rowKey: config.stripeCheckoutTable_rowKey_fromTrigger,
+//                 connection: config.storageConnection
+//             },
+//             {
+//                 name: "inStripeCustomerLookupTable",
+//                 type: "table",
+//                 direction: "in",
+//                 tableName: config.stripeCustomerLookupTable_tableName,
+//                 partitionKey: config.stripeCustomerLookupTable_partitionKey_fromTrigger,
+//                 rowKey: config.stripeCustomerLookupTable_rowKey_fromTrigger,
+//                 connection: config.storageConnection
+//             },
+//             {
+//                 name: "outStripeCustomerLookupTable",
+//                 type: "table",
+//                 direction: "out",
+//                 tableName: config.stripeCustomerLookupTable_tableName,
+//                 partitionKey: config.stripeCustomerLookupTable_partitionKey_fromTrigger,
+//                 rowKey: config.stripeCustomerLookupTable_rowKey_fromTrigger,
+//                 connection: config.storageConnection
+//             },
+//             {
+//                 name: "inStripeUserLookupTable",
+//                 type: "table",
+//                 direction: "in",
+//                 tableName: config.stripeUserLookupTable_tableName,
+//                 partitionKey: config.stripeUserLookupTable_partitionKey_fromTrigger,
+//                 rowKey: config.stripeUserLookupTable_rowKey_fromTrigger,
+//                 connection: config.storageConnection
+//             },
+//             {
+//                 name: "outStripeUserLookupTable",
+//                 type: "table",
+//                 direction: "out",
+//                 tableName: config.stripeUserLookupTable_tableName,
+//                 partitionKey: config.stripeUserLookupTable_partitionKey_fromTrigger,
+//                 rowKey: config.stripeUserLookupTable_rowKey_fromTrigger,
+//                 connection: config.storageConnection
+//             },
+//         ],
+//         disabled: false
+//     };
+// }
+
+// export async function runFunction(config: ServerConfigType, context: {
+//     log: typeof console.log,
+//     done: (error?: any) => void,
+//     bindingData: {
+//         insertionTime: Date,
+//     },
+//     bindings: {
+//         inProcessQueue: ProcessQueue,
+//         inStripeCheckoutTable: StripeCheckoutTable,
+//         inStripeCustomerLookupTable: StripeCustomerLookupTable,
+//         outStripeCustomerLookupTable: StripeCustomerLookupTable,
+//         inStripeUserLookupTable: StripeUserLookupTable,
+//         outStripeUserLookupTable: StripeUserLookupTable,
+//     }
+// }) {
 
 
-
-// Queue Trigger: Update Request Queue
-// Table In-Out: Changing Blob Singleton Check
-// Queue Out: Update Execute Queue Only Once Per Stale Timeout
-
-export function createFunctionJson(config: FunctionTemplateConfig) {
-    return {
-        bindings: [
-            {
-                name: "inProcessQueue",
-                type: "queueTrigger",
-                direction: "in",
-                queueName: config.processQueue_queueName,
-                connection: config.storageConnection
-            },
-            {
-                name: "inStripeCheckoutTable",
-                type: "table",
-                direction: "in",
-                tableName: config.stripeCheckoutTable_tableName,
-                partitionKey: config.stripeCheckoutTable_partitionKey_fromTrigger,
-                rowKey: config.stripeCheckoutTable_rowKey_fromTrigger,
-                connection: config.storageConnection
-            },
-            {
-                name: "inStripeCustomerLookupTable",
-                type: "table",
-                direction: "in",
-                tableName: config.stripeCustomerLookupTable_tableName,
-                partitionKey: config.stripeCustomerLookupTable_partitionKey_fromTrigger,
-                rowKey: config.stripeCustomerLookupTable_rowKey_fromTrigger,
-                connection: config.storageConnection
-            },
-            {
-                name: "outStripeCustomerLookupTable",
-                type: "table",
-                direction: "out",
-                tableName: config.stripeCustomerLookupTable_tableName,
-                partitionKey: config.stripeCustomerLookupTable_partitionKey_fromTrigger,
-                rowKey: config.stripeCustomerLookupTable_rowKey_fromTrigger,
-                connection: config.storageConnection
-            },
-            {
-                name: "inStripeUserLookupTable",
-                type: "table",
-                direction: "in",
-                tableName: config.stripeUserLookupTable_tableName,
-                partitionKey: config.stripeUserLookupTable_partitionKey_fromTrigger,
-                rowKey: config.stripeUserLookupTable_rowKey_fromTrigger,
-                connection: config.storageConnection
-            },
-            {
-                name: "outStripeUserLookupTable",
-                type: "table",
-                direction: "out",
-                tableName: config.stripeUserLookupTable_tableName,
-                partitionKey: config.stripeUserLookupTable_partitionKey_fromTrigger,
-                rowKey: config.stripeUserLookupTable_rowKey_fromTrigger,
-                connection: config.storageConnection
-            },
-        ],
-        disabled: false
-    };
+function buildFunctionA(config: FunctionTemplateConfig) {
+    return buildFunction_common(processQueueTrigger)
+        .bindings(t => ({
+            inProcessQueue: buildQueueTrigger<ProcessQueue>({
+                ...config.getBinding_processQueue()
+            }),
+            inStripeCheckoutTable: buildTable<StripeCheckoutTable>({
+                direction: 'in',
+                ...config.getBinding_stripeCheckoutTable_fromTrigger(t)
+            }),
+            inStripeCustomerLookupTable: buildTable<StripeCustomerLookupTable>({
+                direction: 'in',
+                ...config.getBinding_stripeCustomerLookupTable_fromTrigger(t)
+            }),
+            inStripeUserLookupTable: buildTable<StripeUserLookupTable>({
+                direction: 'in',
+                ...config.getBinding_stripeUserLookupTable_fromTrigger(t)
+            }),
+            outStripeCustomerLookupTable: buildTable<StripeCustomerLookupTable>({
+                direction: 'out',
+                ...config.getBinding_stripeCustomerLookupTable_fromTrigger(t)
+            }),
+            outStripeUserLookupTable: buildTable<StripeUserLookupTable>({
+                direction: 'out',
+                ...config.getBinding_stripeUserLookupTable_fromTrigger(t)
+            }),
+        }))
+        ;
 }
 
-export async function runFunction(config: ServerConfigType, context: {
-    log: typeof console.log,
-    done: (error?: any) => void,
-    bindingData: {
-        insertionTime: Date,
-    },
-    bindings: {
-        inProcessQueue: ProcessQueue,
-        inStripeCheckoutTable: StripeCheckoutTable,
-        inStripeCustomerLookupTable: StripeCustomerLookupTable,
-        outStripeCustomerLookupTable: StripeCustomerLookupTable,
-        inStripeUserLookupTable: StripeUserLookupTable,
-        outStripeUserLookupTable: StripeUserLookupTable,
-    }
-}) {
-    context.log('START');
 
+function buildFunctionB(config: FunctionTemplateConfig) {
+    return buildFunction_common(processQueueTrigger)
+        .bindings(t => ({
+            inProcessQueue: buildQueueTrigger<ProcessQueue>({
+                ...config.getBinding_processQueue()
+            }),
+            inStripeCheckoutTable: buildTable<StripeCheckoutTable>({
+                direction: 'in',
+                ...config.getBinding_stripeCheckoutTable_fromTrigger(t)
+            }),
+            inStripeCustomerLookupTable: buildTable<StripeCustomerLookupTable>({
+                direction: 'in',
+                ...config.getBinding_stripeCustomerLookupTable_fromTrigger(t)
+            }),
+            inStripeUserLookupTable: buildTable<StripeUserLookupTable>({
+                direction: 'in',
+                ...config.getBinding_stripeUserLookupTable_fromTrigger(t)
+            }),
+            outStripeCustomerLookupTable: buildTable<StripeCustomerLookupTable>({
+                direction: 'out',
+                ...config.getBinding_stripeCustomerLookupTable_fromTrigger(t)
+            }),
+            outStripeUserLookupTable: buildTable<StripeUserLookupTable>({
+                direction: 'out',
+                ...config.getBinding_stripeUserLookupTable_fromTrigger(t)
+            }),
+        }))
+        ;
+}
+
+
+function buildFunction(config: FunctionTemplateConfig) {
+    return buildFunction_common(processQueueTrigger)
+        .bindingsAuto(t => ({
+            inProcessQueue: buildBinding<ProcessQueue>(config.getBinding_processQueue()),
+            inStripeCheckoutTable: buildBinding<StripeCheckoutTable>(config.getBinding_stripeCheckoutTable_fromTrigger(t)),
+            inStripeCustomerLookupTable: buildBinding<StripeCustomerLookupTable>(config.getBinding_stripeCustomerLookupTable_fromTrigger(t)),
+            inStripeUserLookupTable: buildBinding<StripeUserLookupTable>(config.getBinding_stripeUserLookupTable_fromTrigger(t)),
+            outStripeCustomerLookupTable: buildBinding<StripeCustomerLookupTable>(config.getBinding_stripeCustomerLookupTable_fromTrigger(t)),
+            outStripeUserLookupTable: buildBinding<StripeUserLookupTable>(config.getBinding_stripeUserLookupTable_fromTrigger(t)),
+        }));
+}
+
+export const createFunctionJson = (config: FunctionTemplateConfig) => build_createFunctionJson(config, buildFunction);
+
+export const runFunction = build_runFunction_common(buildFunction, async (config: ServerConfigType, context) => {
+
+    context.log('START');
 
     const q = context.bindings.inProcessQueue;
 
@@ -100,17 +182,19 @@ export async function runFunction(config: ServerConfigType, context: {
         context.log('Processing', { paymentpaymentStatus: data.paymentStatus, data });
 
         // Log History
-        await saveEntity(
-            config.stripeCheckoutTable_tableName,
-            config.getStripeCheckoutPartitionKey(q.emailHash, q.serverCheckoutId),
-            `${config.getStripeCheckoutRowKey(q.emailHash, q.serverCheckoutId)}_at-${Date.now()}`,
+        const b = config.getBinding_stripeCheckoutTable_fromTrigger(q);
+
+        await deps.saveEntity(
+            b.tableName,
+            b.partitionKey,
+            `${b.rowKey}_at-${Date.now()}`,
             { ...data, isLog: true } as any);
 
         // Save Main
-        await saveEntity(
-            config.stripeCheckoutTable_tableName,
-            config.getStripeCheckoutPartitionKey(q.emailHash, q.serverCheckoutId),
-            config.getStripeCheckoutRowKey(q.emailHash, q.serverCheckoutId),
+        await deps.saveEntity(
+            b.tableName,
+            b.partitionKey,
+            b.rowKey,
             data as any);
     };
 
@@ -120,7 +204,7 @@ export async function runFunction(config: ServerConfigType, context: {
         });
 
         // Execute Charge With Stripe
-        const stripe = Stripe(config.getStripeSecretKey());
+        const stripe = deps.Stripe(config.getStripeSecretKey());
 
         // Lookup Existing Customer using Email
         const customerLookup = context.bindings.inStripeCustomerLookupTable;
@@ -254,4 +338,4 @@ export async function runFunction(config: ServerConfigType, context: {
 
     // context.log('DONE');
     // context.done();
-}
+});

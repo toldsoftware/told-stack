@@ -32,3 +32,22 @@ export interface HttpFunctionRequest_ClientInfo {
         ['x-forwarded-for']: string;
     };
 }
+
+export interface QueueBinding {
+    queueName: string;
+    connection: string;
+}
+
+export interface TableBinding {
+    tableName: string;
+    partitionKey: string;
+    rowKey: string;
+    connection: string;
+}
+
+export interface BlobBinding {
+    path: string;
+    connection: string;
+}
+
+export type AnyBinding = QueueBinding | TableBinding | BlobBinding;

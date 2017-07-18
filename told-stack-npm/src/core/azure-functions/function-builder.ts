@@ -1,7 +1,21 @@
-import { HttpFunctionResponse, HttpFunctionRequest } from "../types/functions";
+import { HttpFunctionResponse, HttpFunctionRequest, QueueBinding, TableBinding, BlobBinding, AnyBinding } from '../types/functions';
 
-export type RuntimeTypesBuilder<TContext, TReq> = {
+export function createTrigger<T>(trigger: T): T {
+    const t = { ...trigger as any };
+
+    for (let k in t) {
+        t[k] = `{${k}}`;
+    }
+
+    return t;
+}
+
+export type RuntimeTypesBuilder_Http<TContext, TReq> = {
     build_runtimeTypes(): { context: TContext, req: TReq };
+}
+
+export type RuntimeTypesBuilder_Common<TContext> = {
+    build_runtimeTypes(): { context: TContext };
 }
 
 export type FunctionJsonBuilder = {
@@ -12,18 +26,37 @@ export function build_createFunctionJson<TConfig>(config: TConfig, cf: (config: 
     return cf(config).build_functionJson();
 }
 
-export function build_runFunction<TConfig, TContext, TReq>(
-    cf: (config: any) => RuntimeTypesBuilder<TContext, TReq>,
+export function build_runFunction_http<TConfig, TContext, TReq=undefined>(
+    cf: (config: any) => RuntimeTypesBuilder_Http<TContext, TReq>,
     runFunction: (config: TConfig, context: TContext, req: TReq) => void | Promise<void>
 ) {
     return runFunction;
 }
 
+export function build_runFunction_common<TConfig, TContext>(
+    cf: (config: any) => RuntimeTypesBuilder_Common<TContext>,
+    runFunction: (config: TConfig, context: TContext) => void | Promise<void>
+) {
+    return runFunction;
+}
+
 export class FunctionBuilder<TBindings={}, TBindingData={}, TContextExt={}, TBuildExt={}> {
+    private _bindingData_trigger: TBindingData;
     private _bindings: { [name: string]: any } = {};
 
-    // Extend
-    bindings<TBindingsExt>(bindings: TBindingsExt): FunctionBuilder<TBindings & TBindingsExt, TBindingData, TContextExt, TBuildExt> {
+    constructor(bindingData: TBindingData) {
+        this._bindingData_trigger = createTrigger(bindingData);
+    }
+
+    // // Extend
+    // trigger<TBindingDataExt>(bindingData?: TBindingDataExt): FunctionBuilder<TBindings, TBindingData & TBindingDataExt, TContextExt, TBuildExt> {
+    //     // Don't do anything
+    //     return this as any;
+    // }
+
+    bindings<TBindingsExt>(getBindings: (bindingData: TBindingData) => TBindingsExt): FunctionBuilder<TBindings & TBindingsExt, TBindingData, TContextExt, TBuildExt> {
+
+        const bindings = getBindings(this._bindingData_trigger);
 
         // Add Bindings
         for (let k in bindings) {
@@ -33,24 +66,86 @@ export class FunctionBuilder<TBindings={}, TBindingData={}, TContextExt={}, TBui
         return this as any;
     }
 
+    // bindingsAuto1<TBindingsExt extends { [name: string]: (t: TBindingData) => AnyBinding }>(bindings: TBindingsExt): FunctionBuilder<TBindings & TBindingsExt, TBindingData, TContextExt, TBuildExt> {
+
+    //     // Add Bindings
+    //     for (let k in bindings) {
+    //         this._bindings[k] = bindings[k];
+    //     }
+
+    //     return this as any;
+    // }
+
+    bindingsAuto<TBindingsExt>(getBindings: (t: TBindingData) => TBindingsExt): FunctionBuilder<TBindings & TBindingsExt, TBindingData, TContextExt, TBuildExt> {
+        const bindings = getBindings(this._bindingData_trigger);
+
+        // Add Bindings
+        for (let k in bindings) {
+            this._bindings[k] = bindings[k];
+
+            // Use name to set direction
+            if (k.match('^in')) {
+                (this._bindings[k] as any).direction = 'in';
+            } else if (k.match('^out')) {
+                (this._bindings[k] as any).direction = 'out';
+            }
+
+            // Use name to set type
+            if (k.match('Queue$')) {
+                (this._bindings[k] as any).type = 'queue';
+            } else if (k.match('Table$')) {
+                (this._bindings[k] as any).type = 'table';
+            } else if (k.match('Blob$')) {
+                (this._bindings[k] as any).type = 'blob';
+            } else if (k.match('QueueTrigger$')) {
+                (this._bindings[k] as any).type = 'queueTrigger';
+            } else if (k.match('TableTrigger$')) {
+                (this._bindings[k] as any).type = 'tableTrigger';
+            } else if (k.match('BlobTrigger$')) {
+                (this._bindings[k] as any).type = 'blobTrigger';
+            }
+        }
+
+
+        return this as any;
+    }
+
+    // bindingsAuto3<TBindingsExt extends { [name: string]: (t: TBindingData) => AnyBinding }>(bindings: TBindingsExt): FunctionBuilder<TBindings & TBindingsExt, TBindingData, TContextExt, TBuildExt> {
+
+    //     // Add Bindings
+    //     for (let k in bindings) {
+    //         this._bindings[k] = bindings[k];
+
+    //         // Use name to set direction
+    //         if (k.match('^in')) {
+    //             (this._bindings[k] as any).direction = 'in';
+    //         } else if (k.match('^out')) {
+    //             (this._bindings[k] as any).direction = 'out';
+    //         }
+    //     }
+
+
+    //     return this as any;
+    // }
+
     // Functions Json
     build_functionJson(): { bindings: any[] } {
         // return {
         //     bindings: [
         //         {
-        //             name: "req",
-        //             type: "httpTrigger",
-        //             direction: "in",
-        //             authLevel: "anonymous",
+        //             name: 'req',
+        //             type: 'httpTrigger',
+        //             direction: 'in',
+        //             authLevel: 'anonymous',
         //             route: config.submit_route
         //         },
         //         {
-        //             name: "res",
-        //             type: "http",
-        //             direction: "out"
+        //             name: 'res',
+        //             type: 'http',
+        //             direction: 'out'
         //         },
         //         {
-        //             name: "outProcessQueue",
+        //             name: 'outProcessQueue',
 
         const bObj = this._bindings;
         const b = Object.getOwnPropertyNames(bObj).map(k => {
@@ -70,7 +165,7 @@ export class FunctionBuilder<TBindings={}, TBindingData={}, TContextExt={}, TBui
     build_runtimeTypes(): {
         context: {
             log: typeof console.log,
-            done: () => void,
+            done: (error?: any) => void,
             bindingData: TBindingData,
             bindings: TBindings;
         } & TContextExt;
@@ -85,68 +180,106 @@ export function buildHttpFunction<TBindingData, TRequestQuery = {}, TRequestBody
     : FunctionBuilder<{}, TBindingData, { res: HttpFunctionResponse<TResponseBody> }, { req: HttpFunctionRequest<TRequestBody> }> {
 
     // {
-    //     name: "req",
-    //     type: "httpTrigger",
-    //     direction: "in",
-    //     authLevel: "anonymous",
+    //     name: 'req',
+    //     type: 'httpTrigger',
+    //     direction: 'in',
+    //     authLevel: 'anonymous',
     //     route: config.submit_route
     // },
     // {
-    //     name: "res",
-    //     type: "http",
-    //     direction: "out"
+    //     name: 'res',
+    //     type: 'http',
+    //     direction: 'out'
     // },
 
-    const b = new FunctionBuilder();
-    const b2 = b.bindings({
+    const b = new FunctionBuilder({});
+    const b2 = b.bindings(t => ({
         req: {
-            type: "httpTrigger",
-            direction: "in",
-            authLevel: "anonymous",
+            type: 'httpTrigger',
+            direction: 'in',
+            authLevel: 'anonymous',
             route: options.route,
         },
         res: {
-            type: "http",
-            direction: "out"
+            type: 'http',
+            direction: 'out'
         }
-    });
+    }));
 
     return b2 as any;
 }
 
-export function buildQueue<TContent>(options: { direction: 'in' | 'out', queueName: string, storageConnection: string }): BindingDefinition<TContent> {
+export function buildFunction_common<TBindingData>(bindingData: TBindingData) {
+    return new FunctionBuilder<{}, TBindingData>(bindingData);
+}
+
+// export function buildFunction_trigger<TBindingData, TBinding>(bindingData: TBindingData, binding:TBinding) {
+//     return new FunctionBuilder<TBinding, TBindingData>(bindingData);
+// }
+
+// export function buildQueueTriggerFunction<TQueue>(options: { queueName: string, connection: string }) {
+
+//     const name = Object.getOwnPropertyNames(binding)[0];
+
+//     const b = new FunctionBuilder();
+//     const b2 = b.bindings({
+//         [name]: {
+//             type: 'queueTrigger',
+//             direction: 'in',
+//             ...(binding as any),
+//         },
+//     });
+
+//     return b2 as any;
+// }
+
+
+export function buildBinding<TBinding>(binding: AnyBinding): TBinding {
+    return binding as any;
+}
+
+export function buildQueueTrigger<TContent>(options: { queueName: string, connection: string }): BindingDefinition<TContent> {
+    return {
+        type: 'queueTrigger',
+        direction: 'in',
+        queueName: options.queueName,
+        connection: options.connection
+    } as any;
+}
+
+export function buildQueue<TContent>(options: { direction: 'in' | 'out', queueName: string, connection: string }): BindingDefinition<TContent> {
     // {
-    //     name: "outProcessQueue",
-    //     type: "queue",
-    //     direction: "out",
+    //     name: 'outProcessQueue',
+    //     type: 'queue',
+    //     direction: 'out',
     //     queueName: config.processQueue_queueName,
     //     connection: config.storageConnection
     // },
 
     return {
-        type: "queue",
+        type: 'queue',
         direction: options.direction,
         queueName: options.queueName,
-        connection: options.storageConnection
+        connection: options.connection
     } as any;
 
 }
 
 
-export function buildTable<TContent>(options: { direction: 'in' | 'out', tableName: string, partitionKey?: string, rowKey?: string, storageConnection: string }): BindingDefinition<TContent> {
-    //     name: "outStripeCheckoutTable",
-    //     type: "table",
-    //     direction: "out",
+export function buildTable<TContent>(options: { direction: 'in' | 'out', tableName: string, partitionKey?: string, rowKey?: string, connection: string }): BindingDefinition<TContent> {
+    //     name: 'outStripeCheckoutTable',
+    //     type: 'table',
+    //     direction: 'out',
     //     tableName: config.stripeCheckoutTable_tableName,
     //     connection: config.storageConnection
 
     return {
-        type: "table",
+        type: 'table',
         direction: options.direction,
         tableName: options.tableName,
         partitionKey: options.partitionKey,
         rowKey: options.rowKey,
-        connection: options.storageConnection
+        connection: options.connection
     } as any;
 
 }
@@ -175,28 +308,28 @@ export function buildTable<TContent>(options: { direction: 'in' | 'out', tableNa
 //     return {
 //         bindings: [
 //             {
-//                 name: "req",
-//                 type: "httpTrigger",
-//                 direction: "in",
-//                 authLevel: "anonymous",
+//                 name: 'req',
+//                 type: 'httpTrigger',
+//                 direction: 'in',
+//                 authLevel: 'anonymous',
 //                 route: config.submit_route
 //             },
 //             {
-//                 name: "res",
-//                 type: "http",
-//                 direction: "out"
+//                 name: 'res',
+//                 type: 'http',
+//                 direction: 'out'
 //             },
 //             {
-//                 name: "outProcessQueue",
-//                 type: "queue",
-//                 direction: "out",
+//                 name: 'outProcessQueue',
+//                 type: 'queue',
+//                 direction: 'out',
 //                 queueName: config.processQueue_queueName,
 //                 connection: config.storageConnection
 //             },
 //             // {
-//             //     name: "outStripeCheckoutTable",
-//             //     type: "table",
-//             //     direction: "out",
+//             //     name: 'outStripeCheckoutTable',
+//             //     type: 'table',
+//             //     direction: 'out',
 //             //     tableName: config.stripeCheckoutTable_tableName,
 //             //     connection: config.storageConnection
 //             // },

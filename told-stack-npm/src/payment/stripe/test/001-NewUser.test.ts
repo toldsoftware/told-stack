@@ -44,14 +44,14 @@ describe('A New User', () => {
         // Start the Subscription
         // Execute the Deliverable
 
-        const MV = fixture.mockValues;
+        const mv = fixture.mockValues;
 
         const reqBodyObj: CheckoutSubmitRequestBody = {
             token: {
-                email: MV.email,
-                id: MV.stripeCheckoutToken,
+                email: mv.email,
+                id: mv.stripeCheckoutToken,
             },
-            clientCheckoutId:MV.clientCheckoutId,
+            clientCheckoutId:mv.clientCheckoutId,
         } as any;
 
         let outProcessQueue: ProcessQueue = null;
@@ -85,19 +85,19 @@ describe('A New User', () => {
 
             assert('outProcessQueue should have correct serverCheckoutId',
                 () => outProcessQueue.serverCheckoutId,
-                () => MV.serverCheckoutId);
+                () => mv.serverCheckoutId);
 
             assert('outProcessQueue should have correct emailHash',
                 () => outProcessQueue.emailHash,
-                () => MV.emailHash);
+                () => mv.emailHash);
 
             assert('outProcessQueue should have correct stripeCheckoutToken',
                 () => outProcessQueue.request.token.id,
-                () => MV.stripeCheckoutToken);
+                () => mv.stripeCheckoutToken);
 
             assert('outProcessQueue should have correct emailHash',
                 () => outProcessQueue.request.clientCheckoutId,
-                () => MV.clientCheckoutId);
+                () => mv.clientCheckoutId);
         });
 
         describe('Step 2: Process the Queue', () => {
@@ -118,13 +118,13 @@ describe('A New User', () => {
             assert('outStripeUserLookupTable should contain new user', () => outStripeUserLookupTable);
             assert('outStripeUserLookupTable should contain expeceted userId',
                 () => outStripeUserLookupTable.userId,
-                () => MV.userId,
+                () => mv.userId,
             );
 
             assert('outStripeCustomerLookupTable should contain new customer', () => outStripeCustomerLookupTable);
             assert('outStripeCustomerLookupTable should contain expeceted customerId',
                 () => outStripeCustomerLookupTable.customerId,
-                () => MV.stripeCustomerId,
+                () => mv.stripeCustomerId,
             );
             // Verify Lookups are expected values
             // assert('outStripeUserLookupTable should contain new userId',

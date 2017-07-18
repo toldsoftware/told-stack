@@ -2,7 +2,7 @@ import { FunctionTemplateConfig, ServerConfigType, ProcessQueue, StripeCheckoutT
 import { insertOrMergeTableEntity_sdk } from "../../../core/utils/azure-storage-binding/tables-sdk";
 import { saveEntity, doesEntityExist } from "../../../core/utils/azure-storage-sdk/tables";
 import { CheckoutStatus, SubscriptionStatus } from "../../common/checkout-types";
-import { Stripe, StripeWithMissing } from "../config/stripe";
+import { Stripe } from "../config/stripe";
 
 
 export function createFunctionJson(config: FunctionTemplateConfig) {
@@ -33,8 +33,8 @@ export async function runFunction(config: ServerConfigType, context: {
     context.log('START');
 
     const q = context.bindings.inWebhookQueue;
-    const stripe = Stripe(config.getStripeSecretKey()) as StripeWithMissing;
-    const event = stripe.webhooks.constructEvent(q.body, q.stripeSignature, config.getStripeWebhookSigningSecret());
+    const stripe = Stripe(config.getStripeSecretKey());
+    const event = stripe.webhooks.constructEvent(q.body as string, q.stripeSignature, config.getStripeWebhookSigningSecret());
 
 
     // Handle Event

@@ -1,31 +1,36 @@
-import { buildHttpFunction, buildQueue, build_runFunction, build_createFunctionJson, buildTable } from "../../../core/azure-functions/function-builder";
+import { buildHttpFunction, buildQueue, build_runFunction_http, build_createFunctionJson, buildTable } from "../../../core/azure-functions/function-builder";
 import { HttpFunctionRequest, HttpFunctionResponse, HttpFunctionRequest_ClientInfo } from "../../../core/types/functions";
 import { FunctionTemplateConfig, ServerConfigType, HttpFunction_BindingData, ProcessQueue, StripeCheckoutTable } from "../config/server-config";
 import { CheckoutSubmitRequestBody, CheckoutSubmitResult } from "../config/client-config";
 import { CheckoutStatus } from "../../common/checkout-types";
 
+import { uuid as _uuid } from "../../../core/utils/uuid";
+
+export const deps = {
+    getServerCheckoutId: () => _uuid.v4(),
+};
+
 function buildFunction(config: FunctionTemplateConfig) {
     return buildHttpFunction({
         route: config.submit_route
     })
-        .bindings({
+        .bindings(t => ({
             outProcessQueue: buildQueue<ProcessQueue>({
                 direction: 'out',
-                queueName: config.processQueue_queueName,
-                storageConnection: config.storageConnection
+                ...config.getBinding_processQueue(),
             }),
             // outStripeCheckoutTable: buildTable<StripeCheckoutTable>({
             //     direction: 'out',
             //     tableName: config.stripeCheckoutTable_tableName,
             //     storageConnection: config.storageConnection
             // }),
-        })
+        }))
         ;
 }
 
 export const createFunctionJson = (config: FunctionTemplateConfig) => build_createFunctionJson(config, buildFunction);
 
-export const runFunction = build_runFunction(buildFunction, (config: ServerConfigType, context, req) => {
+export const runFunction = build_runFunction_http(buildFunction, (config: ServerConfigType, context, req) => {
 
     context.log('START');
 
@@ -53,7 +58,7 @@ export const runFunction = build_runFunction(buildFunction, (config: ServerConfi
     }
 
     const emailHash = config.getEmailHash(request.token.email);
-    const serverCheckoutId = config.createServerCheckoutId();
+    const serverCheckoutId = deps.getServerCheckoutId();
     const checkoutStatus = CheckoutStatus.Submitted;
 
     context.bindings.outProcessQueue = {
