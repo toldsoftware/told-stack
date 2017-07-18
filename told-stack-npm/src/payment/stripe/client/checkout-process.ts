@@ -1,5 +1,5 @@
 import { Observable, Observer } from "../../../core/utils/observable";
-import { CheckoutProcess, CheckoutOptions, CheckoutResult, CheckoutProcessPrepareResult, CheckoutStatus } from '../../common/checkout-types';
+import { CheckoutProcess, CheckoutOptions, CheckoutProcessPrepareResult, CheckoutStatus, DeliverableStatus_ExecutionResult, PaymentStatus, DeliverableStatus, CheckoutResult_Client, SubscriptionStatus } from '../../common/checkout-types';
 import { ClientConfig, ClientRuntimeOptions, ClientConfigOptions, CheckoutSubmitResult, CheckoutStatusResult, CheckoutSubmitRequestBody } from "../config/client-config";
 import { StripeCheckoutAccess, StripeToken, StripeTokenArgs } from "./stripe-checkout-access";
 import { assignPartial } from "../../../core/utils/objects";
@@ -26,18 +26,23 @@ export class StripeCheckoutProcess implements CheckoutProcess {
 
         console.log('StripeCheckoutProcess Setup Result Observer');
         const clientCheckoutId = uuid.v4();
+        const {userToken} = await this.config.getUserToken();
 
-        let observer: Observer<CheckoutResult>;
-        let lastResult: CheckoutResult = {
+        let observer: Observer<CheckoutResult_Client>;
+        let lastResult: CheckoutResult_Client = {
             serverCheckoutId: null,
             clientCheckoutId,
-            status: CheckoutStatus.NotStarted,
+            checkoutStatus: CheckoutStatus.NotStarted,
+            paymentStatus: PaymentStatus.NotStarted,
+            subscriptionStatus: SubscriptionStatus.NotStarted,
+            deliverableStatus: DeliverableStatus.NotStarted,
+            deliverableStatus_executionResult: DeliverableStatus_ExecutionResult.NotStarted,
             timeChanged: Date.now(),
         };
 
         let actualCheckoutOptions: CheckoutOptions;
 
-        const updateResult = (result: Partial<CheckoutResult>) => {
+        const updateResult = (result: Partial<CheckoutResult_Client>) => {
             console.log('StripeCheckoutProcess updateResult', { result });
 
             if (result.clientCheckoutId && result.clientCheckoutId !== lastResult.clientCheckoutId) {
@@ -56,17 +61,18 @@ export class StripeCheckoutProcess implements CheckoutProcess {
             this.runtime.logCheckoutEvent('ResultChange', lastResult);
         }
 
-        const result = new Observable<CheckoutResult>(o => {
+        const result = new Observable<CheckoutResult_Client>(o => {
             console.log('StripeCheckoutProcess Observable START');
             observer = o;
         });
 
         const tokenCallback = async (token: StripeToken, args: StripeTokenArgs) => {
 
-            updateResult({ status: CheckoutStatus.Submitting });
+            updateResult({ checkoutStatus: CheckoutStatus.Submitting });
 
             const url = this.config.getSubmitTokenUrl();
             const data: CheckoutSubmitRequestBody = {
+                userToken,
                 clientCheckoutId,
                 token,
                 args,
@@ -81,8 +87,9 @@ export class StripeCheckoutProcess implements CheckoutProcess {
 
             updateResult(submitResult);
 
-            if (submitResult.status === CheckoutStatus.ProcessingQueued) {
-                // Poll for updates
+            // Poll for Deliverable Status
+            if (submitResult.checkoutStatus === CheckoutStatus.Submitted) {
+
                 const updateUrl = this.config.getCheckoutStatusUrl(data.token.email, submitResult.serverCheckoutId);
 
                 const updateIntervalId = setInterval_exponentialBackoff(async () => {
@@ -91,9 +98,7 @@ export class StripeCheckoutProcess implements CheckoutProcess {
 
                     updateResult(submitResult);
 
-                    if (submitResult.status === CheckoutStatus.ProcessingSucceeded
-                        || submitResult.status === CheckoutStatus.ProcessingExecutionFailed
-                    ) {
+                    if (submitResult.deliverableStatus_executionResult > DeliverableStatus_ExecutionResult.Processing) {
                         clearInterval_exponentialBackoff(updateIntervalId);
                     }
 
@@ -127,18 +132,18 @@ export class StripeCheckoutProcess implements CheckoutProcess {
                     email: o.user.email,
                     allowRememberMe: o.experience.allowRememberMe,
                     opened: () => {
-                        updateResult({ status: CheckoutStatus.Opened });
+                        updateResult({ checkoutStatus: CheckoutStatus.Opened });
                     },
                     closed: () => {
-                        if (lastResult.status < CheckoutStatus.Submitting) {
-                            updateResult({ status: CheckoutStatus.Closed });
+                        if (lastResult.checkoutStatus < CheckoutStatus.Submitting) {
+                            updateResult({ checkoutStatus: CheckoutStatus.Closed });
                         }
                     },
                 },
             });
 
             this.runtime.logCheckoutEvent('Open', { clientCheckoutId, openOptions: options, configOptions: this.config.checkoutOptions });
-            updateResult({ status: CheckoutStatus.Started });
+            updateResult({ checkoutStatus: CheckoutStatus.Started });
         };
 
         console.log('StripeCheckoutProcess DONE');
@@ -149,7 +154,7 @@ export class StripeCheckoutProcess implements CheckoutProcess {
         };
     }
 
-    getResult(checkoutId: string): Observable<CheckoutResult> {
+    getResult(checkoutId: string): Observable<CheckoutResult_Client> {
         throw new Error("Method not implemented.");
     }
 }

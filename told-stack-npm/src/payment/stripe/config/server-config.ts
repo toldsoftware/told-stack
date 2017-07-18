@@ -1,5 +1,5 @@
 import { ClientConfig, CheckoutSubmitRequestBody } from "./client-config";
-import { CheckoutStatus, SubscriptionStatus } from "../../common/checkout-types";
+import { CheckoutStatus, SubscriptionStatus, CheckoutResult } from "../../common/checkout-types";
 import { Stripe, StripeCharge, StripeCustomer, StripePlan, StripeSubscription, StripeEvent } from "./stripe";
 export { CheckoutSubmitRequestBody };
 
@@ -17,6 +17,13 @@ export interface FunctionTemplateConfig {
     stripeCheckoutTable_partitionKey_fromTrigger: string;
     stripeCheckoutTable_rowKey_fromTrigger: string;
 
+    stripeCustomerLookupTable_tableName: string;
+    stripeCustomerLookupTable_partitionKey_fromTrigger: string;
+    stripeCustomerLookupTable_rowKey_fromTrigger: string;
+    
+    stripeUserLookupTable_tableName: string;
+    stripeUserLookupTable_partitionKey_fromTrigger: string;
+    stripeUserLookupTable_rowKey_fromTrigger: string;
 }
 
 export interface HttpFunction_BindingData {
@@ -34,11 +41,9 @@ export interface ProcessQueue {
     serverCheckoutId: string;
 }
 
-export interface StripeCheckoutTable {
+export interface StripeCheckoutTable extends CheckoutResult {
     PartitionKey: string;
     RowKey: string;
-    status: CheckoutStatus;
-    subscriptionStatus?: SubscriptionStatus;
 
     customer?: StripeCustomer,
     charge?: StripeCharge,
@@ -52,11 +57,19 @@ export interface StripeCheckoutTable {
     error?: string;
 }
 
+export interface StripeCustomerLookupTable {
+    customerId: string;
+}
+
+export interface StripeUserLookupTable {
+    userId: string;
+}
+
 export interface StripeWebhookData extends StripeEvent {
 
 }
 
-export interface StripeWebhookRequestBody extends StripeWebhookData {
+export interface StripeWebhookRequestBody extends StripeEvent {
 
 }
 
@@ -65,9 +78,11 @@ export interface StripeWebhookQueue {
     stripeSignature: string;
 }
 
-export interface ServerConfigType extends StripeCheckoutRuntimeConfig {
+export interface ServerConfigType {
+    runtime: StripeCheckoutRuntimeConfig;
+
     getStripeSecretKey(): string;
-    getStripeWebhookEndpointSecret(): string;
+    getStripeWebhookSigningSecret(): string;
 
     getEmailHash(email: string): string;
 
@@ -77,10 +92,14 @@ export interface ServerConfigType extends StripeCheckoutRuntimeConfig {
 }
 
 export interface StripeCheckoutRuntimeConfig {
-    processRequest: (request: CheckoutSubmitRequestBody) => Promise<void>;
+    executeRequest: (request: CheckoutSubmitRequestBody) => Promise<void>;
+
+    lookupUserByUserToken(userToken: string): Promise<{ userId: string }>;
 }
 
 export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
+
+    runtime = this.runtimeConfig;
 
     storageConnection = this.default_storageConnectionString_AppSettingName;
 
@@ -95,6 +114,14 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
     stripeCheckoutTable_partitionKey_fromTrigger = `{emailHash}`;
     stripeCheckoutTable_rowKey_fromTrigger = `{serverCheckoutId}`;
 
+    stripeCustomerLookupTable_tableName = `stripe`;
+    stripeCustomerLookupTable_partitionKey_fromTrigger = `{emailHash}`;
+    stripeCustomerLookupTable_rowKey_fromTrigger = `lookup-email-customer`;
+
+    stripeUserLookupTable_tableName = `stripe`;
+    stripeUserLookupTable_partitionKey_fromTrigger = `{emailHash}`;
+    stripeUserLookupTable_rowKey_fromTrigger = `lookup-email-user`;
+
     getStripeCheckoutPartitionKey(emailHash: string, serverCheckoutId: string) {
         return emailHash;
     }
@@ -108,19 +135,18 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
         private runtimeConfig: StripeCheckoutRuntimeConfig,
         private default_storageConnectionString_AppSettingName = 'AZURE_STORAGE_CONNECTION_STRING',
         private stripeSecretKey_AppSettingName = 'STRIPE_SECRET_KEY',
-        private stripeWebhookEndpointSecret_AppSettingName = 'STRIPE_WEBHOOK_ENDPOINT_SECRET',
+        private stripeWebhookSigningSecret_AppSettingName = 'STRIPE_WEBHOOK_SIGNING_SECRET',
     ) {
 
     }
 
     getEmailHash = this.clientConfig.getEmailHash;
-    processRequest = this.runtimeConfig.processRequest;
 
     getStripeSecretKey() {
         return process.env[this.stripeSecretKey_AppSettingName];
     }
 
-    getStripeWebhookEndpointSecret() {
-        return process.env[this.stripeWebhookEndpointSecret_AppSettingName];
+    getStripeWebhookSigningSecret() {
+        return process.env[this.stripeWebhookSigningSecret_AppSettingName];
     }
 }

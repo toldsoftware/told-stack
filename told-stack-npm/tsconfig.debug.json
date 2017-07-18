@@ -1,0 +1,23 @@
+{
+    "compilerOptions": {
+        "outDir": "./output/debug",
+        "module": "commonjs",
+        "alwaysStrict": true,
+        "declaration": true,
+        "experimentalDecorators": true,
+        "inlineSourceMap": true,
+        "target": "es2016",
+        "forceConsistentCasingInFileNames": true,
+        "allowUnusedLabels": false,
+        "noImplicitReturns": true,
+        "noImplicitThis": true,
+        "emitDecoratorMetadata": true,
+        "noImplicitAny": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "strictNullChecks": true
+    },
+    "include": [
+        "./src/**/*.ts"
+    ]
+}

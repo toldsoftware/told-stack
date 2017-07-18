@@ -4,14 +4,11 @@ export interface HttpFunctionRequest<B=any, Q=any> {
     headers?: { [name: string]: string }
 }
 
-export interface HttpFunctionResponseTyped<T> {
+export interface HttpFunctionResponse<T=any> {
     status?: number;
     body?: T;
     headers?: { [name: string]: string }
     isRaw?: boolean;
-}
-
-export interface HttpFunctionResponse extends HttpFunctionResponseTyped<any> {
 }
 
 export interface HttpResponseOptions {

@@ -52,7 +52,7 @@ export enum CheckoutStatus {
     // The form has called the closed callback (Cancelled, Failed Verification?)
     Closed = 'Closed',
 
-    // // NOT SURE IF THESE CAN BE USED
+    // // NOT SURE IF THESE CAN BE USED WITH STRIPE CHECKOUT
     // // The user has submitted and the provider is verifying the information 
     // Verifing = 'Verifing',
     // // The payment failed (Try Again)
@@ -61,39 +61,56 @@ export enum CheckoutStatus {
     // The payment was sent to the server
     Submitting = 'Submitting',
 
-    // The payment is being processed on the server
-    ProcessingQueued = 'ProcessingQueued',
+    // The payment was received by the server (and Queued)
+    Submitted = 'Submitted',
 
-    // The payment has deqeued and the token is being sent to Stripe
-    ProcessingPayment = 'ProcessingPayment',
+    // The payment was rejected by the server (and not Queued)
+    Submission_Failed = 'Failed',
+}
 
-    // The Customer was Created on Stripe
-    ProcessingPaymentCustomerCreated = 'ProcessingPaymentCustomerCreated',
-    // The Charge was Made on Stripe
-    ProcessingPaymentSuceeded = 'ProcessingPaymentSuceeded',
+export enum PaymentStatus {
+    NotStarted = 'NotStarted',
+    Processing = 'Processing',
+    PaymentSuceeded = 'PaymentSuceeded',
+    PaymentFailed = 'PaymentFailed',
 
-    // The payment failed (Try Again)
-    ProcessingPaymentFailed = 'ProcessingPaymentFailed',
-
-    // The payment is being processed on the server
-    ProcessingExecuting = 'ProcessingExecuting',
-    // The payment was made successfully
-    ProcessingSucceeded = 'ProcessingSucceeded',
-
-    // The payment succeeded but the processing failed (Customer Support)
-    ProcessingExecutionFailed = 'ProcessingExecutionFailed',
-
-    // TODO: PaymentRefunded
-    PaymentRefunded = 'PaymentRefunded',
+    // Payment Refunded or Disputed
+    PaymentWithdrawn = 'PaymentWithdrawn',
 }
 
 export enum SubscriptionStatus {
     NotStarted = 'NotStarted',
-    Subscribing = 'Subscribing',
-    TrialPeriod = 'TrialPeriod',
-    Subscribed = 'Subscribed',
-    PaymentFailed = 'PaymentFailed',
-    Cancelled = 'Cancelled',
+    Processing = 'Processing',
+    SubscriptionFailed = 'SubscriptionFailed',
+    
+    Subscribed_TrialPeriod = 'Subscribed_TrialPeriod',
+    Subscribed_Normal = 'Subscribed',
+
+    // Payment Failed but Still Doing Automated Re-Attempts
+    Subscribed_PastDue = 'Subscribed_PastDue',
+    // Failed to Process (No Further Automated Attempts will be Made)
+    Unsubscribed_PastDue = 'Unsubscribed_PastDue',
+    Unsubscribed_Cancelled = 'Unsubscribed_Cancelled',
+}
+
+export enum DeliverableStatus {
+    NotStarted = 'NotStarted',
+    Processing = 'Processing',
+    Enabled = 'Enabled',
+    Disabled = 'Disabled',
+}
+
+export enum DeliverableStatus_ExecutionResult {
+    NotStarted = 'NotStarted',
+    Processing = 'Processing',
+    Enabled = 'Enabled',
+    Disabled = 'Disabled',
+
+    // For example, something that is disabled but has already been delivered (so there is nothing further to do)
+    Disabled_Impossible = 'Disabled_Impossible',
+
+    // Attempt to Activate Caused an Error in the Activation System
+    Error = 'Error',
 }
 
 
@@ -101,15 +118,24 @@ export type CheckoutProcessOpen = (options: Partial<CheckoutOptions>) => void;
 
 export interface CheckoutProcessPrepareResult {
     open: CheckoutProcessOpen;
-    result: Observable<CheckoutResult>;
+    result: Observable<CheckoutResult_Client>;
 }
 
 export interface CheckoutResult {
     serverCheckoutId: string;
     clientCheckoutId: string;
-    status: CheckoutStatus;
-    timeChanged: number;
+
+    checkoutStatus: CheckoutStatus;
+    paymentStatus: PaymentStatus;
+    subscriptionStatus: SubscriptionStatus;
+    deliverableStatus: DeliverableStatus;
+    deliverableStatus_executionResult: DeliverableStatus_ExecutionResult;
+
     error?: string;
+}
+
+export interface CheckoutResult_Client extends CheckoutResult {
+    timeChanged: number;
 }
 
 export interface CheckoutProcess {
@@ -120,5 +146,5 @@ export interface CheckoutProcess {
     // open(options: CheckoutOptions): Observable<CheckoutResult>;
 
     // Check Results on a Previously Submitted Process
-    getResult(checkoutId: string): Observable<CheckoutResult>;
+    getResult(checkoutId: string): Observable<CheckoutResult_Client>;
 }

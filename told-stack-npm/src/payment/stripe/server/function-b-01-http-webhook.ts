@@ -1,4 +1,4 @@
-import { HttpFunctionRequest, HttpFunctionResponseTyped, HttpFunctionRequest_ClientInfo, HttpFunctionResponse } from "../../../core/types/functions";
+import { HttpFunctionRequest, HttpFunctionRequest_ClientInfo, HttpFunctionResponse } from "../../../core/types/functions";
 import { FunctionTemplateConfig, ServerConfigType, ProcessQueue, HttpFunction_BindingData_Status, StripeCheckoutTable, HttpFunction_BindingData, StripeWebhookRequestBody, StripeWebhookData, StripeWebhookQueue } from "../config/server-config";
 
 export function createFunctionJson(config: FunctionTemplateConfig) {
@@ -7,7 +7,8 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
             {
                 name: "req",
                 type: "httpTrigger",
-                webhookType: "genericJson",
+                // This requires a code be sent by stripe, we will do manual verification instead
+                // webhookType: "genericJson",
                 direction: "in",
                 authLevel: "anonymous",
                 route: config.webhook_route

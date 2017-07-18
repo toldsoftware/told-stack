@@ -13,7 +13,8 @@ export interface ClientRuntimeOptions {
 export interface ClientConfigOptions {
     stripePublishableKey: string;
     checkoutOptions: Partial<CheckoutOptions>;
-    
+    getUserToken: () => Promise<{ userToken: string }>;
+
     getSubmitTokenUrl(): string;
     getCheckoutStatusUrl(email: string, serverCheckoutId: string): string;
     getStripeChargeMetadata(options: CheckoutOptions): { [key: string]: string | number };
@@ -22,6 +23,7 @@ export interface ClientConfigOptions {
 }
 
 export interface CheckoutSubmitRequestBody {
+    userToken: string;
     clientCheckoutId: string;
     token: StripeToken;
     args: StripeTokenArgs;
@@ -46,7 +48,11 @@ export class ClientConfig implements ClientConfigOptions {
     status_route_partial = 'api/stripe-checkout-status';
     get status_route() { return `status_route_partial/{emailHash}/{serverCheckoutId}`; }
 
-    constructor(private options: Partial<ClientConfigOptions>) {
+    constructor(
+        private options: Partial<ClientConfigOptions>,
+        public getUserToken: () => Promise<{ userToken: string }>,
+
+    ) {
         assignPartial(this, options);
     }
 

@@ -1,4 +1,4 @@
-import { HttpFunctionRequest, HttpFunctionResponseTyped, HttpFunctionRequest_ClientInfo } from "../../../core/types/functions";
+import { HttpFunctionRequest, HttpFunctionResponse, HttpFunctionRequest_ClientInfo } from "../../../core/types/functions";
 import { FunctionTemplateConfig, ServerConfigType, ProcessQueue, HttpFunction_BindingData_Status, StripeCheckoutTable } from "../config/server-config";
 import { CheckoutSubmitRequestBody, CheckoutSubmitResult } from "../config/client-config";
 import { CheckoutStatus } from "../../common/checkout-types";
@@ -35,7 +35,7 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
 export async function runFunction(config: ServerConfigType, context: {
     log: typeof console.log,
     done: () => void,
-    res: HttpFunctionResponseTyped<CheckoutSubmitResult>,
+    res: HttpFunctionResponse<CheckoutSubmitResult>,
     bindingData: HttpFunction_BindingData_Status,
     bindings: {
         inStripeCheckoutTable: StripeCheckoutTable,
@@ -49,7 +49,6 @@ export async function runFunction(config: ServerConfigType, context: {
         context.res = {
             body: {
                 error: 'No Status Found Yet, Try Again Soon',
-                status: CheckoutStatus.ProcessingQueued,
             },
             headers: {
                 'Content-Type': 'application/json',
@@ -63,7 +62,11 @@ export async function runFunction(config: ServerConfigType, context: {
 
     context.res = {
         body: {
-            status: data.status,
+            checkoutStatus: data.checkoutStatus,
+            paymentStatus: data.paymentStatus,
+            subscriptionStatus: data.subscriptionStatus,
+            deliverableStatus: data.deliverableStatus,
+            deliverableStatus_executionResult: data.deliverableStatus_executionResult,
         },
         headers: {
             'Content-Type': 'application/json',

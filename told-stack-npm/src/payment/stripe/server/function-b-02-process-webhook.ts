@@ -34,10 +34,60 @@ export async function runFunction(config: ServerConfigType, context: {
 
     const q = context.bindings.inWebhookQueue;
     const stripe = Stripe(config.getStripeSecretKey()) as StripeWithMissing;
-    const event = stripe.webhooks.constructEvent(JSON.stringify(q.body), q.stripeSignature, config.getStripeWebhookEndpointSecret());
+    const event = stripe.webhooks.constructEvent(q.body, q.stripeSignature, config.getStripeWebhookSigningSecret());
 
-    // Validate event
+
+    // Handle Event
     if (event) {
+
+        throw 'Not Implmented';
+
+        // Lookup the stripe payment associated with this event
+
+        // const saveData = async (data: Partial<StripeCheckoutTable>) => {
+        //     context.log('Processing', { status: data.status, data });
+
+        //     // Log History
+        //     await saveEntity(
+        //         config.stripeCheckoutTable_tableName,
+        //         config.getStripeCheckoutPartitionKey(q.emailHash, q.serverCheckoutId),
+        //         `${config.getStripeCheckoutRowKey(q.emailHash, q.serverCheckoutId)}_at-${Date.now()}`,
+        //         { ...data, isLog: true } as any);
+
+        //     // Save Main
+        //     await saveEntity(
+        //         config.stripeCheckoutTable_tableName,
+        //         config.getStripeCheckoutPartitionKey(q.emailHash, q.serverCheckoutId),
+        //         config.getStripeCheckoutRowKey(q.emailHash, q.serverCheckoutId),
+        //         data as any);
+        // };
+
+        // const t = event.type;
+        // // Send Receipt (Charge Succeeded, Invoice Payment Succeeded)
+
+        // // Charge Failed (Refunded, Disputed, etc.)
+        // // Charge Succeeded (Paid, Reinstated, etc.)
+
+        // // Subscription Lapsing (Invoice Payment Attempting)
+        // // Subscription Disabled (Invoice Payment Attempts Failed, Subscription Canceled)
+        // // Subscription Enabled (Invoice Payment Paid after Failure, Subscription Recreated, etc.)
+
+        // const beforeState;
+        // const beforeSubscriptionState;
+
+        // switch (t) {
+        //     case 'charge.succeeded':
+        //         config.ensurePaymentExecuted(event, beforeState, afterState);
+        //         config.sendPaymentReceipt(event);
+        //         break;
+        //     case 'invoice.payment_succeeded':
+        //         config.ensureSubscriptionActive(event, beforeSubscriptionState, afterSubscriptionState);
+        //         config.sendSubscriptionReceipt(event);
+        //         break;
+        //     default:
+        //         break;
+        // }
+
 
     }
 

@@ -4,7 +4,7 @@ declare const require: any;
 export const requireCallback = (p: string) => require(p);
 
 export const entries: EntryInfo[] = [
-
+    
     { name: 'ping-pong', import: '@told/stack/src/tools/ping-pong/server/ping-pong', configImport: './tools/ping-pong' },
 
     { name: 'http-static', import: '@told/stack/src/core/static/server/function-01-http', configImport: './core/static-server' },
@@ -35,6 +35,5 @@ export const entries: EntryInfo[] = [
     { name: 'stripe-checkout-03-http-status', import: '@told/stack/src/payment/stripe/server/function-03-http-status', configImport: './payment/stripe-server' },
     { name: 'stripe-checkout-04-http-webhook', import: '@told/stack/src/payment/stripe/server/function-04-http-webhook', configImport: './payment/stripe-server' },
     // { name: 'stripe-checkout-05-process-webhook', import: '@told/stack/src/payment/stripe/server/function-05-process-webhook', configImport: './payment/stripe-server' },
-
 
 ];

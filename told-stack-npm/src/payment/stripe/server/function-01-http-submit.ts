@@ -1,63 +1,92 @@
-import { HttpFunctionRequest, HttpFunctionResponseTyped, HttpFunctionRequest_ClientInfo } from "../../../core/types/functions";
+import { HttpFunctionRequest, HttpFunctionResponse, HttpFunctionRequest_ClientInfo } from "../../../core/types/functions";
 import { FunctionTemplateConfig, ServerConfigType, HttpFunction_BindingData, ProcessQueue, StripeCheckoutTable } from "../config/server-config";
 import { CheckoutSubmitRequestBody, CheckoutSubmitResult } from "../config/client-config";
 import { CheckoutStatus } from "../../common/checkout-types";
 import { uuid } from "../../../core/utils/uuid";
+import { buildHttpFunction, buildQueue, build_runFunction, build_createFunctionJson, buildTable } from "../../../core/azure-functions/function-builder";
 
-export function createFunctionJson(config: FunctionTemplateConfig) {
-    return {
-        bindings: [
-            {
-                name: "req",
-                type: "httpTrigger",
-                direction: "in",
-                authLevel: "anonymous",
-                route: config.submit_route
-            },
-            {
-                name: "res",
-                type: "http",
-                direction: "out"
-            },
-            {
-                name: "outProcessQueue",
-                type: "queue",
-                direction: "out",
+
+function buildFunction(config: FunctionTemplateConfig) {
+    return buildHttpFunction({
+        route: config.submit_route
+    })
+        .bindings({
+            outProcessQueue: buildQueue<ProcessQueue>({
+                direction: 'out',
                 queueName: config.processQueue_queueName,
-                connection: config.storageConnection
-            },
-            // {
-            //     name: "outStripeCheckoutTable",
-            //     type: "table",
-            //     direction: "out",
+                storageConnection: config.storageConnection
+            }),
+            // outStripeCheckoutTable: buildTable<StripeCheckoutTable>({
+            //     direction: 'out',
             //     tableName: config.stripeCheckoutTable_tableName,
-            //     connection: config.storageConnection
-            // },
-        ],
-        disabled: false
-    };
+            //     storageConnection: config.storageConnection
+            // }),
+        })
+        ;
 }
 
-export async function runFunction(config: ServerConfigType, context: {
-    log: typeof console.log,
-    done: () => void,
-    res: HttpFunctionResponseTyped<CheckoutSubmitResult>,
-    bindingData: HttpFunction_BindingData,
-    bindings: {
-        outProcessQueue: ProcessQueue,
-        outStripeCheckoutTable: StripeCheckoutTable,
-    }
-}, req: HttpFunctionRequest) {
+export const createFunctionJson = (config: FunctionTemplateConfig) => build_createFunctionJson(config, buildFunction);
+
+// export function createFunctionJson(config: FunctionTemplateConfig) {
+//     return {
+//         bindings: [
+//             {
+//                 name: "req",
+//                 type: "httpTrigger",
+//                 direction: "in",
+//                 authLevel: "anonymous",
+//                 route: config.submit_route
+//             },
+//             {
+//                 name: "res",
+//                 type: "http",
+//                 direction: "out"
+//             },
+//             {
+//                 name: "outProcessQueue",
+//                 type: "queue",
+//                 direction: "out",
+//                 queueName: config.processQueue_queueName,
+//                 connection: config.storageConnection
+//             },
+//             // {
+//             //     name: "outStripeCheckoutTable",
+//             //     type: "table",
+//             //     direction: "out",
+//             //     tableName: config.stripeCheckoutTable_tableName,
+//             //     connection: config.storageConnection
+//             // },
+//         ],
+//         disabled: false
+//     };
+// }
+
+// export async function runFunction(config: ServerConfigType, context: {
+//     log: typeof console.log,
+//     done: () => void,
+//     res: HttpFunctionResponse<CheckoutSubmitResult>,
+//     bindingData: HttpFunction_BindingData,
+//     bindings: {
+//         outProcessQueue: ProcessQueue,
+//         outStripeCheckoutTable: StripeCheckoutTable,
+//     }
+// }, req: HttpFunctionRequest) {
+export const runFunction = build_runFunction(buildFunction, (config: ServerConfigType, context, req) => {
+
     context.log('START');
 
     // Handle Max Queue Size (64kb) -> Put in a blob
+    context.log('req', { req });
+
     const request = JSON.parse(req.body) as CheckoutSubmitRequestBody;
+
+    context.log('request', { request });
 
     if (!request.token) {
         context.res = {
             body: {
                 error: 'No Token Sent',
-                status: CheckoutStatus.ProcessingExecutionFailed,
+                checkoutStatus: CheckoutStatus.Submission_Failed,
             },
             headers: {
                 'Content-Type': 'application/json',
@@ -71,7 +100,7 @@ export async function runFunction(config: ServerConfigType, context: {
 
     const emailHash = config.getEmailHash(request.token.email);
     const serverCheckoutId = uuid.v4();
-    const status = CheckoutStatus.ProcessingQueued;
+    const checkoutStatus = CheckoutStatus.Submitted;
 
     context.bindings.outProcessQueue = {
         request,
@@ -91,7 +120,7 @@ export async function runFunction(config: ServerConfigType, context: {
 
     context.res = {
         body: {
-            status,
+            checkoutStatus,
             serverCheckoutId,
         },
         headers: {
@@ -101,4 +130,4 @@ export async function runFunction(config: ServerConfigType, context: {
 
     context.log('DONE');
     context.done();
-};
+});

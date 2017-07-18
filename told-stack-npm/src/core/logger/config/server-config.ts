@@ -73,11 +73,11 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
     // logTable_rowKey_fromQueueTrigger = ``;
 
     sessionLookupTable_tableName_fromQueueTrigger = `sessionuserlookup`;
-    sessionLookupTable_partitionKey_fromQueueTrigger = `session-user-lookup`;
+    sessionLookupTable_partitionKey_fromQueueTrigger = `lookup-session-user`;
     sessionLookupTable_rowKey_fromQueueTrigger = `{sessionId}`;
 
     userLookupTable_tableName_fromQueueTrigger = `sessionuserlookup`;
-    userLookupTable_partitionKey_fromQueueTrigger = `user-session-lookup`;
+    userLookupTable_partitionKey_fromQueueTrigger = `lookup-user-session`;
     userLookupTable_rowKey_fromQueueTrigger = `{userId}`;
 
     constructor(

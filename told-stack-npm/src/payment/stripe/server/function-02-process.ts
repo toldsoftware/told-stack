@@ -1,7 +1,7 @@
-import { FunctionTemplateConfig, ServerConfigType, ProcessQueue, StripeCheckoutTable, StripeCheckoutRuntimeConfig } from "../config/server-config";
+import { FunctionTemplateConfig, ServerConfigType, ProcessQueue, StripeCheckoutTable, StripeCheckoutRuntimeConfig, StripeCustomerLookupTable, StripeUserLookupTable } from "../config/server-config";
 import { insertOrMergeTableEntity_sdk } from "../../../core/utils/azure-storage-binding/tables-sdk";
 import { saveEntity, doesEntityExist } from "../../../core/utils/azure-storage-sdk/tables";
-import { CheckoutStatus, SubscriptionStatus } from "../../common/checkout-types";
+import { SubscriptionStatus, PaymentStatus, DeliverableStatus } from "../../common/checkout-types";
 import { Stripe } from "../config/stripe";
 
 
@@ -29,15 +29,42 @@ export function createFunctionJson(config: FunctionTemplateConfig) {
                 rowKey: config.stripeCheckoutTable_rowKey_fromTrigger,
                 connection: config.storageConnection
             },
-            // {
-            //     name: "outStripeCheckoutTable",
-            //     type: "table",
-            //     direction: "out",
-            //     tableName: config.stripeCheckoutTable_tableName,
-            //     partitionKey: config.stripeCheckoutTable_partitionKey_fromTrigger,
-            //     rowKey: config.stripeCheckoutTable_rowKey_fromTrigger,
-            //     connection: config.storageConnection
-            // },
+            {
+                name: "inStripeCustomerLookupTable",
+                type: "table",
+                direction: "in",
+                tableName: config.stripeCustomerLookupTable_tableName,
+                partitionKey: config.stripeCustomerLookupTable_partitionKey_fromTrigger,
+                rowKey: config.stripeCustomerLookupTable_rowKey_fromTrigger,
+                connection: config.storageConnection
+            },
+            {
+                name: "outStripeCustomerLookupTable",
+                type: "table",
+                direction: "out",
+                tableName: config.stripeCustomerLookupTable_tableName,
+                partitionKey: config.stripeCustomerLookupTable_partitionKey_fromTrigger,
+                rowKey: config.stripeCustomerLookupTable_rowKey_fromTrigger,
+                connection: config.storageConnection
+            },
+            {
+                name: "inStripeUserLookupTable",
+                type: "table",
+                direction: "in",
+                tableName: config.stripeUserLookupTable_tableName,
+                partitionKey: config.stripeUserLookupTable_partitionKey_fromTrigger,
+                rowKey: config.stripeUserLookupTable_rowKey_fromTrigger,
+                connection: config.storageConnection
+            },
+            {
+                name: "outStripeUserLookupTable",
+                type: "table",
+                direction: "out",
+                tableName: config.stripeUserLookupTable_tableName,
+                partitionKey: config.stripeUserLookupTable_partitionKey_fromTrigger,
+                rowKey: config.stripeUserLookupTable_rowKey_fromTrigger,
+                connection: config.storageConnection
+            },
         ],
         disabled: false
     };
@@ -52,7 +79,10 @@ export async function runFunction(config: ServerConfigType, context: {
     bindings: {
         inProcessQueue: ProcessQueue,
         inStripeCheckoutTable: StripeCheckoutTable,
-        // outStripeCheckoutTable: StripeCheckoutTable,
+        inStripeCustomerLookupTable: StripeCustomerLookupTable,
+        outStripeCustomerLookupTable: StripeCustomerLookupTable,
+        inStripeUserLookupTable: StripeUserLookupTable,
+        outStripeUserLookupTable: StripeUserLookupTable,
     }
 }) {
     context.log('START');
@@ -60,23 +90,13 @@ export async function runFunction(config: ServerConfigType, context: {
 
     const q = context.bindings.inProcessQueue;
 
+    // TODO: What if the process needs to be restarted, like if userToken was late supplied
     if (context.bindings.inStripeCheckoutTable) {
         return context.done({ error: 'Entity Already Exists', q });
     }
 
-    // Verify Entity Does not exist to Prevent Replay
-    // const exists = await doesEntityExist(
-    //     config.stripeCheckoutTable_tableName,
-    //     config.getStripeCheckoutPartitionKey(q.emailHash, q.serverCheckoutId),
-    //     config.getStripeCheckoutRowKey(q.emailHash, q.serverCheckoutId),
-    // );
-
-    // if (exists) {
-    //     return context.done({ error: 'Entity Already Exists', q });
-    // }
-
     const saveData = async (data: Partial<StripeCheckoutTable>) => {
-        context.log('Processing', { status: data.status, data });
+        context.log('Processing', { paymentpaymentStatus: data.paymentStatus, data });
 
         // Log History
         await saveEntity(
@@ -95,18 +115,47 @@ export async function runFunction(config: ServerConfigType, context: {
 
     try {
         await saveData({
-            status: CheckoutStatus.ProcessingPayment,
+            paymentStatus: PaymentStatus.Processing,
         });
 
         // Execute Charge With Stripe
         const stripe = Stripe(config.getStripeSecretKey());
+
+        // Lookup Existing Customer using Email
+        const customerLookup = context.bindings.inStripeCustomerLookupTable;
+        const userLookup = context.bindings.inStripeCustomerLookupTable;
+
+        // TODO: FINISH THIS
+        if (!!true) {
+            throw 'Not Implmented';
+        }
+
+        // if !User && !Customer => New Customer
+        // if User & !Customer => Invalid (Unknown Customer) => New Customer
+        // if !User && Customer => Unclaimed Customer (Previous Payment with No User Account Attached)
+        // if User && Customer => Verify User is Correct => Existing Customer
+
+        if (customerLookup) {
+
+            // Verify ownership
+            if (userLookup.customerId !== customerLookup.customerId) {
+                // If the customer or user is unknown
+                // If the customer or user do not match
+            }
+
+            // Get Existing Customer
+            const existingCustomerId = customerLookup.customerId
+            const existingCustomer = await stripe.customers.retrieve(existingCustomerId);
+        }
+
+        // Create Customer
         const customer = await stripe.customers.create({
             source: q.request.token.id,
             email: q.request.token.email,
         });
 
         await saveData({
-            status: CheckoutStatus.ProcessingPaymentCustomerCreated,
+            // paymentStatus: PaymentStatus.CustomerCreated,
             customer,
         });
 
@@ -120,43 +169,13 @@ export async function runFunction(config: ServerConfigType, context: {
         });
 
         await saveData({
-            status: CheckoutStatus.ProcessingPaymentSuceeded,
+            paymentStatus: PaymentStatus.PaymentSuceeded,
             charge,
-        });
-
-        // Subscribe
-        await saveData({
-            subscriptionStatus: SubscriptionStatus.Subscribing,
-        });
-
-        const planId = `${q.request.checkoutOptions.product.subscriptionPlanId_noPrice}-m-${q.request.checkoutOptions.product.monthlyAmountCents}`;
-        const foundPlan = await stripe.plans.retrieve(planId);
-
-        const plan = foundPlan || await stripe.plans.create({
-            amount: q.request.checkoutOptions.product.monthlyAmountCents,
-            currency: 'usd',
-            interval: 'month',
-            name: q.request.checkoutOptions.product.subscriptionPlanName,
-            id: planId,
-            trial_period_days: 30,
-            statement_descriptor: q.request.statementDescriptor_subscription,
-        });
-
-        const subscription = await stripe.subscriptions.create({
-            customer: customer.id,
-            plan: plan.id,
-            metadata: q.request.metadata,
-        });
-
-        await saveData({
-            subscriptionStatus: SubscriptionStatus.TrialPeriod,
-            plan,
-            subscription,
         });
 
     } catch (error) {
         await saveData({
-            status: CheckoutStatus.ProcessingPaymentFailed,
+            paymentStatus: PaymentStatus.PaymentFailed,
             error,
             timeFailed: Date.now(),
         });
@@ -164,28 +183,74 @@ export async function runFunction(config: ServerConfigType, context: {
         return context.done({ message: 'ProcessingPaymentFailed', error });
     }
 
-    try {
-        // Process Request
-        await saveData({
-            status: CheckoutStatus.ProcessingExecuting,
-        });
+    throw 'Not Implemented';
 
-        await config.processRequest(q.request);
+    // try {
 
-        await saveData({
-            status: CheckoutStatus.ProcessingSucceeded,
-            timeSucceeded: Date.now(),
-        });
-    } catch (error) {
-        await saveData({
-            status: CheckoutStatus.ProcessingExecutionFailed,
-            error,
-            timeFailed: Date.now(),
-        });
+    //     // Subscribe
+    //     await saveData({
+    //         subscriptionStatus: SubscriptionStatus.Processing,
+    //     });
 
-        return context.done({ message: 'ProcessingExecutionFailed', error });
-    }
+    //     const planId = `${q.request.checkoutOptions.product.subscriptionPlanId_noPrice}-m-${q.request.checkoutOptions.product.monthlyAmountCents}`;
+    //     const foundPlan = await stripe.plans.retrieve(planId);
 
-    context.log('DONE');
-    context.done();
+    //     const plan = foundPlan || await stripe.plans.create({
+    //         amount: q.request.checkoutOptions.product.monthlyAmountCents,
+    //         currency: 'usd',
+    //         interval: 'month',
+    //         name: q.request.checkoutOptions.product.subscriptionPlanName,
+    //         id: planId,
+    //         trial_period_days: 30,
+    //         statement_descriptor: q.request.statementDescriptor_subscription,
+    //     });
+
+    //     const subscription = await stripe.subscriptions.create({
+    //         customer: customer.id,
+    //         plan: plan.id,
+    //         metadata: q.request.metadata,
+    //     });
+
+    //     await saveData({
+    //         subscriptionStatus: SubscriptionStatus.Subscribed_TrialPeriod,
+    //         plan,
+    //         subscription,
+    //     });
+
+    // } catch (error) {
+    //     await saveData({
+    //         // paymentStatus: PaymentStatus.PaymentFailed,
+    //         subscriptionStatus: SubscriptionStatus.SubscriptionFailed,
+    //         error,
+    //         timeFailed: Date.now(),
+    //     });
+
+    //     return context.done({ message: 'SubscriptionFailed', error });
+    // }
+
+    // try {
+    //     // Process Request
+    //     await saveData({
+    //         deliverableStatus: DeliverableStatus.Processing,
+    //     });
+
+    //     await config.processRequest(q.request);
+
+    //     await saveData({
+    //         paymentStatus: PaymentStatus.ProcessingSucceeded,
+    //         timeSucceeded: Date.now(),
+    //     });
+    // } catch (error) {
+    //     await saveData({
+    //         deliverableStatus: DeliverableStatus.,
+    //         paymentStatus: PaymentStatus.ProcessingExecutionFailed,
+    //         error,
+    //         timeFailed: Date.now(),
+    //     });
+
+    //     return context.done({ message: 'ProcessingExecutionFailed', error });
+    // }
+
+    // context.log('DONE');
+    // context.done();
 }

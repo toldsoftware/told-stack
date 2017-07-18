@@ -16,4 +16,4 @@ export const clientConfig = new ClientConfig({
             allowRememberMe: true
         },
     },
-});
+}, async () => null);
