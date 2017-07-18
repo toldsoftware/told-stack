@@ -6,7 +6,7 @@
 // }));
 
 import { createTester, mockHttp, GettersObject, Getter, mockQueue } from "../../../core/testing/testing";
-import { ServerConfigType, StripeCheckoutRuntimeConfig } from "../config/server-config";
+import { ServerConfigType, StripeCheckoutRuntimeConfig, processQueueTrigger } from "../config/server-config";
 import { runFunction as f1, deps as deps1 } from "../server/function-01-http-submit";
 import { runFunction as f2, deps as deps2 } from "../server/function-02-process";
 import { mockStripeConstructor } from "../config/stripe.mock";
@@ -38,9 +38,6 @@ export function createFixture() {
         getEmailHash: { getter: () => () => mv.emailHash },
         getStripeSecretKey: { getter: () => () => 'STRIPE_SECRET_KEY' },
         getStripeWebhookSigningSecret: { getter: () => () => 'STRIPE_SIGNING_SECRET' },
-        stripeCheckoutTable_tableName: { getter: () => 'table-name' },
-        getStripeCheckoutPartitionKey: { getter: () => () => 'partition-key' },
-        getStripeCheckoutRowKey: { getter: () => () => 'row-key' },
         runtime: {
             getter: () => ({
                 executeRequest: async () => {
@@ -51,6 +48,14 @@ export function createFixture() {
             })
         } as Getter<StripeCheckoutRuntimeConfig>,
 
+        getBinding_stripeCheckoutTable_fromTrigger: {
+            getter: () => (trigger: typeof processQueueTrigger) => ({
+                tableName: 'stripe',
+                partitionKey: `${trigger.emailHash}`,
+                rowKey: `${trigger.serverCheckoutId}`,
+                connection: 'STORAGE_SETTING'
+            })
+        },
         // createServerCheckoutId: { getter: () => () => v.serverCheckoutId },
     };
 

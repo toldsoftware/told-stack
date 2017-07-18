@@ -1,6 +1,5 @@
-import { buildHttpFunction, buildQueue, build_runFunction_http, build_createFunctionJson, buildTable } from "../../../core/azure-functions/function-builder";
-import { HttpFunctionRequest, HttpFunctionResponse, HttpFunctionRequest_ClientInfo } from "../../../core/types/functions";
-import { FunctionTemplateConfig, ServerConfigType, HttpFunction_BindingData, ProcessQueue, StripeCheckoutTable } from "../config/server-config";
+import { buildFunction_http, build_runFunction_http, build_createFunctionJson, build_binding } from "../../../core/azure-functions/function-builder";
+import { FunctionTemplateConfig, ServerConfigType, ProcessQueue, StripeCheckoutTable } from "../config/server-config";
 import { CheckoutSubmitRequestBody, CheckoutSubmitResult } from "../config/client-config";
 import { CheckoutStatus } from "../../common/checkout-types";
 
@@ -11,21 +10,12 @@ export const deps = {
 };
 
 function buildFunction(config: FunctionTemplateConfig) {
-    return buildHttpFunction({
+    return buildFunction_http({
         route: config.submit_route
     })
         .bindings(t => ({
-            outProcessQueue: buildQueue<ProcessQueue>({
-                direction: 'out',
-                ...config.getBinding_processQueue(),
-            }),
-            // outStripeCheckoutTable: buildTable<StripeCheckoutTable>({
-            //     direction: 'out',
-            //     tableName: config.stripeCheckoutTable_tableName,
-            //     storageConnection: config.storageConnection
-            // }),
-        }))
-        ;
+            outProcessQueue: build_binding<ProcessQueue>(config.getBinding_processQueue())
+        }));
 }
 
 export const createFunctionJson = (config: FunctionTemplateConfig) => build_createFunctionJson(config, buildFunction);

@@ -6,8 +6,6 @@ import { createTrigger } from "../../../core/azure-functions/function-builder";
 export { CheckoutSubmitRequestBody };
 
 export interface FunctionTemplateConfig {
-    // storageConnection: string;
-
     submit_route: string;
     status_route: string;
     webhook_route: string;
@@ -17,35 +15,15 @@ export interface FunctionTemplateConfig {
     getBinding_stripeCustomerLookupTable_fromTrigger(trigger: typeof processQueueTrigger): TableBinding;
     getBinding_stripeUserLookupTable_fromTrigger(trigger: typeof processQueueTrigger): TableBinding;
 
-    // processQueue_queueName: string;
-    // webhookQueue_queueName: string;
-
-    // stripeCheckoutTable_tableName: string;
-    // stripeCheckoutTable_partitionKey_fromTrigger: string;
-    // stripeCheckoutTable_rowKey_fromTrigger: string;
-
-    // stripeCustomerLookupTable_tableName: string;
-    // stripeCustomerLookupTable_partitionKey_fromTrigger: string;
-    // stripeCustomerLookupTable_rowKey_fromTrigger: string;
-
-    // stripeUserLookupTable_tableName: string;
-    // stripeUserLookupTable_partitionKey_fromTrigger: string;
-    // stripeUserLookupTable_rowKey_fromTrigger: string;
-}
-
-export interface HttpFunction_BindingData {
-    // Doesn't work
-    // DateTime: string;
-    // ['rand-guid']: string;
-}
-
-export interface HttpFunction_BindingData_Status extends ProcessQueue {
+    getBinding_stripeWebhookQueue(): QueueBinding
 }
 
 export const processQueueTrigger = createTrigger({
     emailHash: '',
     serverCheckoutId: '',
 });
+
+export const statusHttpTrigger = processQueueTrigger;
 
 export interface ProcessQueue {
     request: CheckoutSubmitRequestBody;
@@ -100,10 +78,6 @@ export interface ServerConfigType {
     // createServerCheckoutId(): string;
 
     getBinding_stripeCheckoutTable_fromTrigger(trigger: typeof processQueueTrigger): TableBinding;
-
-    // stripeCheckoutTable_tableName: string;
-    // getStripeCheckoutPartitionKey(emailHash: string, serverCheckoutId: string): string;
-    // getStripeCheckoutRowKey(emailHash: string, serverCheckoutId: string): string;
 }
 
 export interface StripeCheckoutRuntimeConfig {
@@ -126,6 +100,13 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
     getBinding_processQueue(): QueueBinding {
         return {
             queueName: 'stripe-checkout-request',
+            connection: this.storageConnection
+        };
+    }
+
+    getBinding_stripeWebhookQueue(): QueueBinding {
+        return {
+            queueName: 'stripe-webhook',
             connection: this.storageConnection
         };
     }
@@ -158,29 +139,6 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
         };
     }
 
-    // processQueue_queueName = 'stripe-checkout-request';
-    // webhookQueue_queueName = 'stripe-webhook';
-
-    // stripeCheckoutTable_tableName = `stripe`;
-    // stripeCheckoutTable_partitionKey_fromTrigger = `{emailHash}`;
-    // stripeCheckoutTable_rowKey_fromTrigger = `{serverCheckoutId}`;
-
-    // stripeCustomerLookupTable_tableName = `stripe`;
-    // stripeCustomerLookupTable_partitionKey_fromTrigger = `{emailHash}`;
-    // stripeCustomerLookupTable_rowKey_fromTrigger = `lookup-email-customer`;
-
-    // stripeUserLookupTable_tableName = `stripe`;
-    // stripeUserLookupTable_partitionKey_fromTrigger = `{emailHash}`;
-    // stripeUserLookupTable_rowKey_fromTrigger = `lookup-email-user`;
-
-    getStripeCheckoutPartitionKey(emailHash: string, serverCheckoutId: string) {
-        return emailHash;
-    }
-
-    getStripeCheckoutRowKey(emailHash: string, serverCheckoutId: string) {
-        return serverCheckoutId;
-    }
-
     constructor(
         private clientConfig: ClientConfig,
         private runtimeConfig: StripeCheckoutRuntimeConfig,
@@ -192,9 +150,6 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
     }
 
     getEmailHash = this.clientConfig.getEmailHash;
-    // createServerCheckoutId(): string {
-    //     return uuid.v4();
-    // }
 
     getStripeSecretKey() {
         return process.env[this.stripeSecretKey_AppSettingName];

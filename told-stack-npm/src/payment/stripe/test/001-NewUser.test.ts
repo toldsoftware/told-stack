@@ -105,7 +105,7 @@ describe('A New User', () => {
                 onLog,
                 config: fixture.mocks.serverConfig,
                 bindings: {
-                    inProcessQueue: { getter: () => outProcessQueue },
+                    inProcessQueueTrigger: { getter: () => outProcessQueue },
                     inStripeCheckoutTable: { getter: () => null },
                     inStripeUserLookupTable: { getter: () => null },
                     inStripeCustomerLookupTable: { getter: () => null },

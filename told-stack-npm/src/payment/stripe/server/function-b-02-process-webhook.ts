@@ -1,39 +1,30 @@
+import { buildFunction_common, build_binding, build_createFunctionJson, build_runFunction_common } from "../../../core/azure-functions/function-builder";
 import { FunctionTemplateConfig, ServerConfigType, ProcessQueue, StripeCheckoutTable, StripeWebhookQueue } from "../config/server-config";
 import { insertOrMergeTableEntity_sdk } from "../../../core/utils/azure-storage-binding/tables-sdk";
 import { saveEntity, doesEntityExist } from "../../../core/utils/azure-storage-sdk/tables";
 import { CheckoutStatus, SubscriptionStatus } from "../../common/checkout-types";
-import { Stripe } from "../config/stripe";
 
+import { Stripe as _Stripe } from "../config/stripe";
 
-export function createFunctionJson(config: FunctionTemplateConfig) {
-    return {
-        bindings: [
-            {
-                name: "inWebhookQueue",
-                type: "queueTrigger",
-                direction: "in",
-                queueName: config.webhookQueue_queueName,
-                connection: config.storageConnection
-            },
-        ],
-        disabled: false
-    };
+export const deps = {
+    Stripe: _Stripe,
+};
+
+function buildFunction(config: FunctionTemplateConfig) {
+    return buildFunction_common()
+        .bindings(t => ({
+            inWebhookQueueTrigger: build_binding<StripeWebhookQueue>(config.getBinding_stripeWebhookQueue()),
+        }));
 }
 
-export async function runFunction(config: ServerConfigType, context: {
-    log: typeof console.log,
-    done: (error?: any) => void,
-    bindingData: {
-        insertionTime: Date,
-    },
-    bindings: {
-        inWebhookQueue: StripeWebhookQueue,
-    }
-}) {
+export const createFunctionJson = (config: FunctionTemplateConfig) => build_createFunctionJson(config, buildFunction);
+
+export const runFunction = build_runFunction_common(buildFunction, async (config: ServerConfigType, context) => {
+
     context.log('START');
 
-    const q = context.bindings.inWebhookQueue;
-    const stripe = Stripe(config.getStripeSecretKey());
+    const q = context.bindings.inWebhookQueueTrigger;
+    const stripe = deps.Stripe(config.getStripeSecretKey());
     const event = stripe.webhooks.constructEvent(q.body as string, q.stripeSignature, config.getStripeWebhookSigningSecret());
 
 
@@ -221,4 +212,4 @@ export async function runFunction(config: ServerConfigType, context: {
 
     context.log('DONE');
     context.done();
-}
+});
