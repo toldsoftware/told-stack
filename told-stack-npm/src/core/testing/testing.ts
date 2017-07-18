@@ -3,8 +3,8 @@ import { HttpFunctionResponse, HttpFunctionRequest } from "../types/functions";
 
 export function createTester<T>(test: (name: string, run: () => void) => void, createFixture: () => T) {
 
-    const it = (subject: string, run: (fixture: T) => void) => {
-        console.log(`IT: ${subject}`);
+    const describe = (subject: string, run: (fixture: T) => void) => {
+        console.log(`DESCRIBE: ${subject}`);
         // test(subject, () => run(createFixture()));
         run(createFixture());
     }
@@ -14,14 +14,27 @@ export function createTester<T>(test: (name: string, run: () => void) => void, c
         test(goal, () => run(createFixture()));
     }
 
+    // const through = (step: string, run: (fixture: T) => void) => {
+    //     console.log(`THROUGH: ${step}`);
+    //     test(step, () => run(createFixture()));
+    // }
+
 
     return {
-        it,
+        describe,
         should,
+        //  through,
     };
 }
 
-export interface HttpContextType<TResponse, TBindingData, TBindings> {
+export interface ContextType_Common<TBindingData, TBindings> {
+    log: typeof console.log,
+    done: () => void,
+    bindingData: TBindingData,
+    bindings: TBindings
+};
+
+export interface ContextType_Http<TResponse, TBindingData, TBindings> {
     log: typeof console.log,
     done: () => void,
     res: HttpFunctionResponse<TResponse>,
@@ -68,6 +81,7 @@ export function injectGetterSetters<TObj, TProp>(onGetSet: () => void, obj: TObj
             },
             set: function (v) {
                 onGetSet();
+                if (!gs) { throw `No Property or Defined for Setter '${k}'`; }
                 if (!gs.setter) { throw `No Setter Defined for '${k}'`; }
                 gs.setter(this['_' + k] = v);
             },
@@ -84,51 +98,64 @@ export function injectStart<T>(onGetSet: () => void, obj: T) {
     };
 }
 
+export type RunFunction_Common<TConfig, TBindings, TBindingData> = (
+    config: TConfig,
+    context: ContextType_Common<TBindingData, TBindings>) => void;
+
 export type RunFunction_Http<TConfig, TResponse, TBindings, TBindingData, TBody, TQuery> = (
     config: TConfig,
-    context: HttpContextType<TResponse, TBindingData, TBindings>,
+    context: ContextType_Http<TResponse, TBindingData, TBindings>,
     req: HttpFunctionRequest<TBody, TQuery>) => void;
 
+export type Mocks_Common<TConfig, TBindings, TBindingData> = {
+    onLog?: typeof console.log,
+    config: GettersObject<TConfig>,
+    bindings?: GetterSettersObject<TBindings>,
+    bindingData?: GettersObject<TBindingData>,
+};
+
+export function buildContext_common<TConfig, TResponse={}, TBindings={}, TBindingData={}>(
+    mocks: Mocks_Common<TConfig, TBindings, TBindingData>
+) {
+    let isDone = false;
+    const onGetSet = () => {
+        if (isDone) {
+            throw 'Invalid Operation: context.done() must be the final operation';
+        }
+    };
+
+    const done = () => {
+        // Future commands should cause Test Failure
+        isDone = true;
+    };
+
+    const config = injectGetterSetters(onGetSet, {}, mocks.config as GetterSettersObject<TConfig>);
+
+    const contextCommon = {
+        log: mocks.onLog,
+        done,
+        bindings: injectGetterSetters(onGetSet, {}, mocks.bindings),
+        bindingData: injectGetterSetters(onGetSet, {}, mocks.bindingData as GetterSettersObject<TBindingData>),
+    };
+
+    return { config, contextCommon, onGetSet };
+}
 
 export function mockHttp<TConfig, TResponse={}, TBindings={}, TBindingData={}, TBody={}, TQuery={}>(
     runFunction: RunFunction_Http<TConfig, TResponse, TBindings, TBindingData, TBody, TQuery>
 ) {
-    // console.log('mockHttp START');
     return (
-        mocks: {
-            onLog?: typeof console.log,
-            config: GettersObject<TConfig>,
+        mocks: Mocks_Common<TConfig, TBindings, TBindingData> & {
             res?: Setter<HttpFunctionResponse<TResponse>>,
-            bindings?: GetterSettersObject<TBindings>,
-            bindingData?: GettersObject<TBindingData>,
             req_body_query?: GettersObject<{ body?: TBody, query?: TQuery }>,
             req_headers?: GettersObject<any>,
-        }
+        },
     ) => {
 
-        let isDone = false;
-        const onGetSet = () => {
-            if (isDone) {
-                throw 'Invalid Operation: context.done() must be the final operation';
-            }
-        };
+        const { config, contextCommon, onGetSet } = buildContext_common(mocks);
 
-        const done = () => {
-            // Future commands should cause Test Failure
-            isDone = true;
-        };
-
-        const config = injectGetterSetters(onGetSet, {}, mocks.config as GetterSettersObject<TConfig>);
-
-        const context_01 = {
-            log: mocks.onLog,
-            done,
-            bindings: injectGetterSetters(onGetSet, {}, mocks.bindings),
-            bindingData: injectGetterSetters(onGetSet, {}, mocks.bindingData as GetterSettersObject<TBindingData>),
-        };
-
-        const context: HttpContextType<TResponse, TBindingData, TBindings> =
-            injectStart(onGetSet, context_01)
+        const context: ContextType_Http<TResponse, TBindingData, TBindings> =
+            injectStart(onGetSet, contextCommon)
                 .inject({ res: mocks.res } as GetterSettersObject<{ res: HttpFunctionResponse<TResponse> }>)
                 .end();
 
@@ -139,5 +166,26 @@ export function mockHttp<TConfig, TResponse={}, TBindings={}, TBindingData={}, T
             .end();
 
         return runFunction(config, context, req);
+    };
+}
+
+
+export function mockQueue<TConfig, TBindings={}, TBindingData={}, TBody={}, TQuery={}>(
+    runFunction: RunFunction_Common<TConfig, TBindings, TBindingData>
+) {
+    // console.log('mockHttp START');
+    return (
+        mocks: Mocks_Common<TConfig, TBindings, TBindingData> & {
+        },
+    ) => {
+
+        const { config, contextCommon, onGetSet } = buildContext_common(mocks);
+
+        const context: ContextType_Common<TBindingData, TBindings> =
+            injectStart(onGetSet, contextCommon)
+                // .inject({ res: mocks.res } as GetterSettersObject<{ res: HttpFunctionResponse<TResponse> }>)
+                .end();
+
+        return runFunction(config, context);
     };
 }

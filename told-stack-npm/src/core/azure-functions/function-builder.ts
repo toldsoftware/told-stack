@@ -5,7 +5,7 @@ export type RuntimeTypesBuilder<TContext, TReq> = {
 }
 
 export type FunctionJsonBuilder = {
-    build_functionJson(): string
+    build_functionJson(): { bindings: any[] };
 }
 
 export function build_createFunctionJson<TConfig>(config: TConfig, cf: (config: any) => FunctionJsonBuilder) {
@@ -34,7 +34,7 @@ export class FunctionBuilder<TBindings={}, TBindingData={}, TContextExt={}, TBui
     }
 
     // Functions Json
-    build_functionJson(): string {
+    build_functionJson(): { bindings: any[] } {
         // return {
         //     bindings: [
         //         {
@@ -61,9 +61,9 @@ export class FunctionBuilder<TBindings={}, TBindingData={}, TContextExt={}, TBui
             };
         });
 
-        return JSON.stringify({
+        return {
             bindings: b,
-        }, null, ' ');
+        };
     }
 
     // Runtime

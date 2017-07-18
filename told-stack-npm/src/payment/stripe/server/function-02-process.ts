@@ -1,7 +1,8 @@
 import { FunctionTemplateConfig, ServerConfigType, ProcessQueue, StripeCheckoutTable, StripeCheckoutRuntimeConfig, StripeCustomerLookupTable, StripeUserLookupTable } from "../config/server-config";
+import { SubscriptionStatus, PaymentStatus, DeliverableStatus } from "../../common/checkout-types";
+
 import { insertOrMergeTableEntity_sdk } from "../../../core/utils/azure-storage-binding/tables-sdk";
 import { saveEntity, doesEntityExist } from "../../../core/utils/azure-storage-sdk/tables";
-import { SubscriptionStatus, PaymentStatus, DeliverableStatus } from "../../common/checkout-types";
 import { Stripe } from "../config/stripe";
 
 

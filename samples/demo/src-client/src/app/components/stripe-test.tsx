@@ -28,7 +28,16 @@ export class StripeTest extends RX.Component<{}, {
     open = () => {
         if (this.state.open) {
             this.state.open({
-                product: { amountCents: 100, description: 'Cool Thing to Buy' },
+                product: {
+                    productCode: 'test-product-01',
+                    amountCents: 10000,
+                    monthlyAmountCents: 1000,
+                    description: 'Cool Thing to Buy',
+                    statementDescriptor: 'prod 01',
+                    statementDescriptor_subscription: 'prod 01 sub',
+                    subscriptionPlanId_noPrice: 'prod01',
+                    subscriptionPlanName: 'prod01',
+                },
                 user: { email: 'me@home.com' },
             });
         }
@@ -52,9 +61,13 @@ export class StripeTest extends RX.Component<{}, {
                 >Checkout</RX.Button>
                 {this.state.result && (
                     <RX.View>
-                        <RX.Text>status: {this.state.result.status}</RX.Text>
-                        <RX.Text>checkoutId: {this.state.result.checkoutId}</RX.Text>
-                        <RX.Text>timeChanged: {this.state.result.timeChanged}</RX.Text>
+                        <RX.Text>checkoutId: {this.state.result.clientCheckoutId}</RX.Text>
+                        <RX.Text>checkoutStatus: {this.state.result.checkoutStatus}</RX.Text>
+                        <RX.Text>paymentStatus: {this.state.result.paymentStatus}</RX.Text>
+                        <RX.Text>subscriptionStatus: {this.state.result.subscriptionStatus}</RX.Text>
+                        <RX.Text>deliverableStatus: {this.state.result.deliverableStatus}</RX.Text>
+                        <RX.Text>deliverableStatus_executionResult: {this.state.result.deliverableStatus_executionResult}</RX.Text>
+                        {/* <RX.Text>timeChanged: {this.state.result.}</RX.Text> */}
                     </RX.View>
                 )}
             </RX.View>

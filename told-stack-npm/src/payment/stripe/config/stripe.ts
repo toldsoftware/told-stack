@@ -1,29 +1,30 @@
-// Won't run
-import 'stripe-node';
-const Stripe: StripeNode.StripeExport = require('stripe');
+// // Code Time
+// import 'stripe-node';
+// const Stripe: StripeNode.StripeExport = require('stripe');
+// END Code Time
 
+// Runtime Build
+namespace StripeNode {
+    export type Stripe = any;
 
-// namespace StripeNode {
-//     export type Stripe = any;
-
-//     export namespace charges {
-//         export type ICharge = any;
-//     }
-//     export namespace customers {
-//         export type ICustomer = any;
-//     }
-//     export namespace plans {
-//         export type IPlan = any;
-//     }
-//     export namespace subscriptions {
-//         export type ISubscription = any;
-//     }
-//     export namespace events {
-//         export type IEvent = any;
-//     }
-// }
-// const Stripe = require('stripe');
-
+    export namespace charges {
+        export type ICharge = any;
+    }
+    export namespace customers {
+        export type ICustomer = any;
+    }
+    export namespace plans {
+        export type IPlan = any;
+    }
+    export namespace subscriptions {
+        export type ISubscription = any;
+    }
+    export namespace events {
+        export type IEvent = any;
+    }
+}
+const Stripe = require('stripe');
+// END Runtime Build
 
 export { Stripe };
 

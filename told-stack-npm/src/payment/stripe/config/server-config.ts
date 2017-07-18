@@ -2,6 +2,7 @@ import { ClientConfig, CheckoutSubmitRequestBody } from "./client-config";
 import { CheckoutStatus, SubscriptionStatus, CheckoutResult } from "../../common/checkout-types";
 import { Stripe, StripeCharge, StripeCustomer, StripePlan, StripeSubscription, StripeEvent } from "./stripe";
 export { CheckoutSubmitRequestBody };
+import { uuid } from "../../../core/utils/uuid";
 
 export interface FunctionTemplateConfig {
     storageConnection: string;
@@ -20,7 +21,7 @@ export interface FunctionTemplateConfig {
     stripeCustomerLookupTable_tableName: string;
     stripeCustomerLookupTable_partitionKey_fromTrigger: string;
     stripeCustomerLookupTable_rowKey_fromTrigger: string;
-    
+
     stripeUserLookupTable_tableName: string;
     stripeUserLookupTable_partitionKey_fromTrigger: string;
     stripeUserLookupTable_rowKey_fromTrigger: string;
@@ -85,6 +86,7 @@ export interface ServerConfigType {
     getStripeWebhookSigningSecret(): string;
 
     getEmailHash(email: string): string;
+    createServerCheckoutId(): string;
 
     stripeCheckoutTable_tableName: string;
     getStripeCheckoutPartitionKey(emailHash: string, serverCheckoutId: string): string;
@@ -95,6 +97,7 @@ export interface StripeCheckoutRuntimeConfig {
     executeRequest: (request: CheckoutSubmitRequestBody) => Promise<void>;
 
     lookupUserByUserToken(userToken: string): Promise<{ userId: string }>;
+    createUserId(): Promise<string>;
 }
 
 export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
@@ -141,6 +144,9 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
     }
 
     getEmailHash = this.clientConfig.getEmailHash;
+    createServerCheckoutId(): string {
+        return uuid.v4();
+    }
 
     getStripeSecretKey() {
         return process.env[this.stripeSecretKey_AppSettingName];

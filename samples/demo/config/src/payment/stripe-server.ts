@@ -1,9 +1,9 @@
 import { ServerConfig, StripeCheckoutRuntimeConfig } from "@told/stack/src/payment/stripe/config/server-config";
 import { clientConfig } from "./stripe-client";
-import { processRequest } from '../../../src-server/src/process-stripe-checkout';
+import { executeRequest } from '../../../src-server/src/execute-stripe-checkout';
 
 const runtimeConfig: StripeCheckoutRuntimeConfig = {
-    processRequest,
+    executeRequest,
     lookupUserByUserToken: async (token) => ({ userId: '42' }),
 };
 
