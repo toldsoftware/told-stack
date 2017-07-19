@@ -5,6 +5,7 @@ import { executeRequest } from '../../../src-server/src/execute-stripe-checkout'
 const runtimeConfig: StripeCheckoutRuntimeConfig = {
     executeRequest,
     lookupUserByUserToken: async (token) => ({ userId: '42' }),
+    createUserId: async () => '42',
 };
 
 export const config = new ServerConfig(clientConfig, runtimeConfig);
