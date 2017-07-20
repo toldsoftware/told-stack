@@ -1,0 +1,1 @@
+import '../payment/stripe/test/000-all-tests.test';

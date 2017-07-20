@@ -80,11 +80,16 @@ export interface ServerConfigType {
     getBinding_stripeCheckoutTable_fromTrigger(trigger: typeof processQueueTrigger): TableBinding;
 }
 
+export enum GetUserResultError {
+    NoError = '',
+    EmailBelongsToAnotherUser_RequireLogin = 'EmailBelongsToAnotherUser_RequireLogin',
+}
+
 export interface StripeCheckoutRuntimeConfig {
     executeRequest: (request: CheckoutSubmitRequestBody) => Promise<void>;
 
     lookupUserByUserToken(userToken: string): Promise<{ userId: string }>;
-    createUserId(): Promise<string>;
+    getOrCreateCurrentUserId(stripeEmail: string): Promise<{ userId: string, error?: GetUserResultError }>;
 }
 
 export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {

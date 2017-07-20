@@ -1,8 +1,8 @@
 import { buildFunction_common, build_binding, build_runFunction_common, build_createFunctionJson } from "../../../core/azure-functions/function-builder";
-import { FunctionTemplateConfig, ServerConfigType, ProcessQueue, StripeCheckoutTable, StripeCheckoutRuntimeConfig, StripeCustomerLookupTable, StripeUserLookupTable, processQueueTrigger } from "../config/server-config";
-import { SubscriptionStatus, PaymentStatus, DeliverableStatus } from "../../common/checkout-types";
+import { FunctionTemplateConfig, ServerConfigType, ProcessQueue, StripeCheckoutTable, StripeCheckoutRuntimeConfig, StripeCustomerLookupTable, StripeUserLookupTable, processQueueTrigger, GetUserResultError } from "../config/server-config";
+import { SubscriptionStatus, PaymentStatus, DeliverableStatus, CheckoutStatus } from "../../common/checkout-types";
 import { saveEntity as _saveEntity } from "../../../core/utils/azure-storage-sdk/tables";
-import { Stripe as _Stripe } from "../config/stripe";
+import { Stripe as _Stripe, StripeCustomer } from "../config/stripe";
 
 export const deps = {
     saveEntity: _saveEntity,
@@ -29,11 +29,6 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
 
     const q = context.bindings.inProcessQueueTrigger;
 
-    // TODO: What if the process needs to be restarted, like if userToken was late supplied
-    if (context.bindings.inStripeCheckoutTable) {
-        return context.done({ error: 'Entity Already Exists', q });
-    }
-
     const saveData = async (data: Partial<StripeCheckoutTable>) => {
         context.log('Processing', { paymentpaymentStatus: data.paymentStatus, data });
 
@@ -54,6 +49,18 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
             data as any);
     };
 
+    // Restart the process only if the user required login
+    if (context.bindings.inStripeCheckoutTable) {
+        if (context.bindings.inStripeCheckoutTable.checkoutStatus === CheckoutStatus.Submission_Rejected_LoginAndResubmit) {
+            // Continue
+            await saveData({
+                checkoutStatus: CheckoutStatus.Submitted,
+            });
+        } else {
+            return context.done({ error: 'Entity Already Exists', q });
+        }
+    }
+
     try {
         await saveData({
             paymentStatus: PaymentStatus.Processing,
@@ -66,34 +73,58 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
         const customerLookup = context.bindings.inStripeCustomerLookupTable;
         const userLookup = context.bindings.inStripeCustomerLookupTable;
 
-        // TODO: FINISH THIS
-        if (!!true) {
-            throw 'Not Implmented';
-        }
+        // if !User && !Customer => New Customer & New User
+        // ??? if User & !Customer => Invalid (Unknown Customer) => New Customer => Attach to User 
+        // ? if !User && Customer => Unclaimed Customer (Previous Payment with No User Account Attached) => New User => Attach to User
+        // ? if User && Customer => Verify User is Correct => Existing Customer
 
-        // if !User && !Customer => New Customer
-        // if User & !Customer => Invalid (Unknown Customer) => New Customer
-        // if !User && Customer => Unclaimed Customer (Previous Payment with No User Account Attached)
-        // if User && Customer => Verify User is Correct => Existing Customer
+        let customer: StripeCustomer = null;
+        let userId: string = null;
 
-        if (customerLookup) {
+        if (!customerLookup && !userLookup) {
 
-            // Verify ownership
-            if (userLookup.customerId !== customerLookup.customerId) {
-                // If the customer or user is unknown
-                // If the customer or user do not match
+            // Create Customer and User
+            const newCustomer = await stripe.customers.create({
+                source: q.request.token.id,
+                email: q.request.token.email,
+            });
+
+            customer = newCustomer;
+            const userResult = await config.runtime.getOrCreateCurrentUserId(q.request.token.email);
+            if (userResult.error) {
+                if (userResult.error === GetUserResultError.EmailBelongsToAnotherUser_RequireLogin) {
+                    await saveData({
+                        checkoutStatus: CheckoutStatus.Submission_Rejected_LoginAndResubmit,
+                        paymentStatus: PaymentStatus.Paused,
+                    });
+                    return context.done({ error: 'User Requires Login', q, userResult });
+                }
+
+                return context.done({ error: 'Unknown User Error', q, userResult });
             }
 
-            // Get Existing Customer
-            const existingCustomerId = customerLookup.customerId
-            const existingCustomer = await stripe.customers.retrieve(existingCustomerId);
-        }
+            userId = userResult.userId;
 
-        // Create Customer
-        const customer = await stripe.customers.create({
-            source: q.request.token.id,
-            email: q.request.token.email,
-        });
+            // Save
+            context.bindings.outStripeCustomerLookupTable = { customerId: customer.id };
+            context.bindings.outStripeUserLookupTable = { userId };
+
+        } else {
+            // TODO: FINISH THIS
+            if (!!true) {
+                throw 'Not Implemented';
+            }
+
+            // // Verify ownership
+            // if (userLookup.customerId !== customerLookup.customerId) {
+            //     // If the customer or user is unknown
+            //     // If the customer or user do not match
+            // }
+
+            // // Get Existing Customer
+            // const existingCustomerId = customerLookup.customerId
+            // const existingCustomer = await stripe.customers.retrieve(existingCustomerId);
+        }
 
         await saveData({
             // paymentStatus: PaymentStatus.CustomerCreated,
@@ -124,7 +155,7 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
         return context.done({ message: 'ProcessingPaymentFailed', error });
     }
 
-    throw 'Not Implemented';
+    // throw 'Not Implemented';
 
     // try {
 

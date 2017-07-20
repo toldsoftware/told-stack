@@ -65,12 +65,16 @@ export enum CheckoutStatus {
     Submitted = 'Submitted',
 
     // The payment was rejected by the server (and not Queued)
-    Submission_Failed = 'Failed',
+    Submission_Failed = 'Submission_Failed',
+
+    // The Submission Requires User Login with the Stripe Email
+    Submission_Rejected_LoginAndResubmit = 'Submission_Rejected_LoginAndResubmit',
 }
 
 export enum PaymentStatus {
     NotStarted = 'NotStarted',
     Processing = 'Processing',
+    Paused = 'Paused',
     PaymentSuceeded = 'PaymentSuceeded',
     PaymentFailed = 'PaymentFailed',
 

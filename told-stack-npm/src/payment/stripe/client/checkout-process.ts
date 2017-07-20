@@ -26,7 +26,7 @@ export class StripeCheckoutProcess implements CheckoutProcess {
 
         console.log('StripeCheckoutProcess Setup Result Observer');
         const clientCheckoutId = uuid.v4();
-        const {userToken} = await this.config.getUserToken();
+        const { userToken } = await this.config.getUserToken();
 
         let observer: Observer<CheckoutResult_Client>;
         let lastResult: CheckoutResult_Client = {
@@ -97,6 +97,14 @@ export class StripeCheckoutProcess implements CheckoutProcess {
                     const submitResult = await rSubmit.json() as CheckoutStatusResult;
 
                     updateResult(submitResult);
+
+                    if (submitResult.checkoutStatus === CheckoutStatus.Submission_Rejected_LoginAndResubmit) {
+                        clearInterval_exponentialBackoff(updateIntervalId);
+                        // TODO: Require Login and then resubmit with same payment token
+                        throw 'Require Login - Not Implemented';
+
+                        // return;
+                    }
 
                     if (submitResult.deliverableStatus_executionResult > DeliverableStatus_ExecutionResult.Processing) {
                         clearInterval_exponentialBackoff(updateIntervalId);

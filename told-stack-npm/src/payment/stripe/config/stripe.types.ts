@@ -18,7 +18,7 @@ export interface StripeMetadata {
 }
 
 export interface StripeCharges {
-    create(data: {
+    create(args: {
         customer: StripeCustomerId;
         amount: number;
         currency: StripeCurrencyCode;
@@ -29,11 +29,11 @@ export interface StripeCharges {
 }
 
 export interface StripeCharge {
-
+    id: StripeChargeId;
 }
 
 export interface StripeCustomers {
-    create(data: {
+    create(args: {
         source: StripeSourceId;
         email: StripeEmail;
     }): StripeCustomer;

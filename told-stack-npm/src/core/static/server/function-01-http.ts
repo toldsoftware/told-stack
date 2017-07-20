@@ -32,9 +32,30 @@ export async function runFunction(config: ServerConfigType, context: {
     bindings: {
     }
 }, req: HttpFunctionRequest) {
-    context.log('START');
+    context.log('START', { query: req.query });
 
-    const p = config.getPath(req);
+    let p = '';
+
+    try {
+        p = config.getPath(req);
+    } catch (err) {
+        context.res = {
+            isRaw: true,
+            body: {
+                error: 'File Path Error',
+                also: 'Ain\'t nobody got time for that',
+                ref: 'https://youtu.be/Nh7UgAprdpM',
+            },
+            headers: {
+                'Cache-Control': 'max-age=300, public',
+                'Content-Type': 'application/json',
+            }
+        };
+
+        context.log('ERROR', { err });
+        context.done();
+        return;
+    }
 
     context.log('Reading File', { p, query: req.query });
 
