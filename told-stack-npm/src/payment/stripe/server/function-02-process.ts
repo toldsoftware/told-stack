@@ -90,7 +90,7 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
 
         // Lookup Existing Customer using Email
         const customerLookup = context.bindings.inStripeCustomerLookupTable;
-        const userLookup = context.bindings.inStripeCustomerLookupTable;
+        const userLookup = context.bindings.inStripeUserLookupTable;
 
         // if !User && !Customer => New Customer & New User
         // ??? if User & !Customer => Invalid (Unknown Customer) => New Customer => Attach to User 
@@ -124,6 +124,27 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
             // Save
             context.bindings.outStripeCustomerLookupTable = { customerId: customer.id };
             context.bindings.outStripeUserLookupTable = { userId };
+
+        } else if (customerLookup && userLookup) {
+            // Existing User
+            const userResult = await config.runtime.getOrCreateCurrentUserId(q.request.token.email);
+
+            if (userResult.userId !== userLookup.userId) {
+                throw 'User Lookup found a Different User than the Logged in User';
+            }
+
+            userId = userResult.userId;
+
+            try {
+
+                customer = await stripe.customers.retrieve(customerLookup.customerId);
+
+                if (!customer) {
+                    throw 'No Customer Retrieved';
+                }
+            } catch (err) {
+                throw { error: 'Stripe Failed to Find Customer by Customer Id', innerError: err };
+            }
 
         } else {
             // TODO: FINISH THIS

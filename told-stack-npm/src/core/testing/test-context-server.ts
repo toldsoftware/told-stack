@@ -1,4 +1,4 @@
-import { TestContext } from './integration-testing';
+import { TestContext, TestResult } from './integration-testing';
 import { TableBinding, BlobBinding } from "../types/functions";
 import { fetchTyped } from "../utils/fetch-typed-server";
 import { partialDeepCompare } from "../utils/objects";
@@ -6,6 +6,7 @@ import { loadEntity_parse } from "../utils/azure-storage-sdk/tables";
 import { readBlob } from "../utils/azure-storage-sdk/blobs";
 
 export class TestContext_Server implements TestContext {
+    private _pass = true;
 
     constructor(private config: {
         rootUrl: string,
@@ -13,7 +14,14 @@ export class TestContext_Server implements TestContext {
         notifyFailure: () => void,
     }) { }
 
-    notifyFailure = this.config.notifyFailure;
+    getResult = (): TestResult => {
+        return { result: this._pass ? 'pass' : 'fail' };
+    }
+
+    notifyFailure = () => {
+        this._pass = false;
+        this.config.notifyFailure();
+    }
 
     apiFetch = async <TResponse, TBody = {}>(apiRoute: string, options?: { body: TBody; }): Promise<TResponse> => {
         // TODO: Handle Query

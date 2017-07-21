@@ -7,4 +7,6 @@ import { TestContext } from "../../../../../told-stack-npm/src/core/testing/inte
 export const paymentTests = [
     (testContext: TestContext) => Tests.test_001_new_user(testContext, new TestConfig(clientConfig, config, { shouldUseNewProduct: true })),
     (testContext: TestContext) => Tests.test_001_new_user(testContext, new TestConfig(clientConfig, config, { shouldUseNewProduct: false })),
+    (testContext: TestContext) => Tests.test_002_existing_user(testContext, new TestConfig(clientConfig, config, { shouldUseNewProduct: true })),
+    (testContext: TestContext) => Tests.test_002_existing_user(testContext, new TestConfig(clientConfig, config, { shouldUseNewProduct: false })),
 ];

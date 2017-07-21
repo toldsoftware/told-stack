@@ -20,7 +20,7 @@ export const createFunctionJson = (config: FunctionTemplateConfig) => build_crea
 
 export const runFunction = build_runFunction_http(buildFunction, (config: ServerConfigType, context, req) => {
     const data = context.bindings.inStripeCheckoutTable;
-    context.log('START', { data , bindingData: context.bindingData });
+    context.log('START', { ParitionKey: data.PartitionKey, RowKey: data.RowKey });
 
     if (!data) {
         context.res = {
@@ -44,6 +44,7 @@ export const runFunction = build_runFunction_http(buildFunction, (config: Server
             subscriptionStatus: data.subscriptionStatus,
             deliverableStatus: data.deliverableStatus,
             deliverableStatus_executionResult: data.deliverableStatus_executionResult,
+            error: data.error,
         },
         headers: {
             'Content-Type': 'application/json',

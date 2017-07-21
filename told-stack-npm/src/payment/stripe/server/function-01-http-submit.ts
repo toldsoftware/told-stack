@@ -25,11 +25,11 @@ export const runFunction = build_runFunction_http(buildFunction, (config: Server
     context.log('START');
 
     // Handle Max Queue Size (64kb) -> Put in a blob
-    context.log('req', { req });
+    // context.log('req', { req });
 
     const request = JSON.parse(req.body) as CheckoutSubmitRequestBody;
 
-    context.log('request', { request });
+    // context.log('request', { request });
 
     if (!request.token) {
         context.res = {
@@ -42,7 +42,7 @@ export const runFunction = build_runFunction_http(buildFunction, (config: Server
             }
         };
 
-        context.log('DONE');
+        context.log('ERROR: No Token Sent');
         context.done();
         return;
     }
@@ -65,7 +65,7 @@ export const runFunction = build_runFunction_http(buildFunction, (config: Server
     //     timeRequested: Date.now(),
     // };
 
-    context.log(`Stored in Queue`);
+    context.log(`Stored in Queue`, { emailHash, serverCheckoutId });
 
     context.res = {
         body: {
