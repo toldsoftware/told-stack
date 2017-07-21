@@ -8,11 +8,12 @@ export interface TestContext {
     assert: Assert;
     load: LoadStorage;
     apiFetch: ApiFetch;
+    notifyFailure: () => void;
 };
 
 export function createTest<TConfigs>(create: (configs: TConfigs) => {
     name: string,
-    run: (assert: Assert, load: LoadStorage, apiFetch: ApiFetch) => Promise<{ result: 'pass' | 'fail', message?: string }>
+    run: (assert: Assert, load: LoadStorage, apiFetch: ApiFetch, notifyFailure: () => void) => Promise<{ result: 'pass' | 'fail', message?: string }>
 }) {
     return (testContext: TestContext, configs: TConfigs) => {
         const { name, run } = create(configs);
@@ -20,7 +21,7 @@ export function createTest<TConfigs>(create: (configs: TConfigs) => {
         return {
             name,
             run: () => {
-                return run(testContext.assert, testContext.load, testContext.apiFetch);
+                return run(testContext.assert, testContext.load, testContext.apiFetch, testContext.notifyFailure);
             }
         };
     };

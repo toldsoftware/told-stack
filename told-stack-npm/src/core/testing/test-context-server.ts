@@ -10,7 +10,10 @@ export class TestContext_Server implements TestContext {
     constructor(private config: {
         rootUrl: string,
         log: typeof console.log,
+        notifyFailure: () => void,
     }) { }
+
+    notifyFailure = this.config.notifyFailure;
 
     apiFetch = async <TResponse, TBody = {}>(apiRoute: string, options?: { body: TBody; }): Promise<TResponse> => {
         // TODO: Handle Query
@@ -34,19 +37,21 @@ export class TestContext_Server implements TestContext {
             return true;
         } else {
             this.config.log(`! FAIL - ${name}`, { actual, expected });
+            this.notifyFailure();
             return false;
         }
     }
 
     load = async <TExpected>(binding: TableBinding | BlobBinding): Promise<TExpected> => {
         if (isTableBinding(binding)) {
-            return await loadEntity_parse<TExpected>(binding.tableName, binding.partitionKey, binding.rowKey) ;
+            return await loadEntity_parse<TExpected>(binding.tableName, binding.partitionKey, binding.rowKey);
         } else {
             const container = binding.path.substr(0, binding.path.indexOf('/'));
             const blob = binding.path.substr(binding.path.indexOf('/') + 1);
             return await readBlob(container, blob) as any as TExpected;
         }
     }
+
 }
 
 function isTableBinding(binding: TableBinding | BlobBinding): binding is TableBinding {

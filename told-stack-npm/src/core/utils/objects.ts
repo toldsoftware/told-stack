@@ -72,16 +72,23 @@ export function assignPartial<T>(t: T, p: Partial<T>): T {
     return t;
 }
 
-export function partialDeepCompare<T>(a: T, e: Partial<T>) {
+export function partialDeepCompare<T>(a: T, e: Partial<T>, depth = 0) {
+    if (depth > 100) {
+        throw 'partialDeepCompare Seems to be in a cyclic loop';
+    }
+
     if (e === a) { return true; }
     if ((e === undefined || e === null) && (a === undefined || a === null)) { return true; }
     if ((e === undefined || e === null || a === undefined || a === null)) { return false; }
+    if (typeof a === 'string') { return false; }
 
     for (let k in e) {
+        // if (!e.hasOwnProperty(k)) { continue; }
+
         const e2 = e[k];
         const a2 = a[k];
 
-        if (!partialDeepCompare(a[k], e[k] as any)) {
+        if (!partialDeepCompare(a2, e2 as any, depth + 1)) {
             return false;
         }
     }
