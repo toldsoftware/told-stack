@@ -46,7 +46,7 @@ export class ClientConfig implements ClientConfigOptions {
     domain = '/';
     submit_route = 'api/stripe-checkout-submit';
     status_route_partial = 'api/stripe-checkout-status';
-    get status_route() { return `status_route_partial/{emailHash}/{serverCheckoutId}`; }
+    get status_route() { return `${this.status_route_partial}/{emailHash}/{serverCheckoutId}`; }
 
     constructor(
         private options: Partial<ClientConfigOptions>,
@@ -57,11 +57,11 @@ export class ClientConfig implements ClientConfigOptions {
     }
 
     getSubmitTokenUrl(): string {
-        return `${this.domain}/${this.submit_route}`;
+        return `${this.domain}${this.submit_route}`;
     }
 
     getCheckoutStatusUrl(email: string, serverCheckoutId: string): string {
-        return `${this.domain}/${this.status_route}/${this.getEmailHash(email)}/${serverCheckoutId}`;
+        return `${this.domain}${this.status_route_partial}/${this.getEmailHash(email)}/${serverCheckoutId}`;
     }
 
     getEmailHash(email: string): string {

@@ -3,6 +3,8 @@ dist
 lib
 _extra
 _deploy
+_deploy_testing
+_deploy_tests
 _intermediate
 __generated__
 

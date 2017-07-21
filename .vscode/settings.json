@@ -2,6 +2,8 @@
 {
     "files.exclude": {
         "told-stack-npm/src/**/*.js": true,
-        "told-stack-npm/src/**/*.map": true
+        "told-stack-npm/src/**/*.map": true,
+        "samples/demo/config/src/**/*.js": true,
+        "samples/demo/config/src/**/*.map": true
     }
 }

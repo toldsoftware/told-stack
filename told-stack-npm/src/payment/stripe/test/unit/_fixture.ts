@@ -5,12 +5,12 @@
 //     }
 // }));
 
-import { mockHttp, GettersObject, Getter, mockQueue, createRecorderCallback } from "../../../core/testing/testing";
-import { ServerConfigType, StripeCheckoutRuntimeConfig, processQueueTrigger, CheckoutSubmitRequestBody } from "../config/server-config";
-import { runFunction as f1, deps as deps1 } from "../server/function-01-http-submit";
-import { runFunction as f2, deps as deps2 } from "../server/function-02-process";
-import { mockStripeConstructor } from "../config/stripe.mock";
-import * as Stripe from "../config/stripe.types";
+import { mockHttp, GettersObject, Getter, mockQueue, createRecorderCallback } from "../../../../core/testing/mock-testing";
+import { ServerConfigType, StripeCheckoutRuntimeConfig, processQueueTrigger, CheckoutSubmitRequestBody } from "../../config/server-config";
+import { runFunction as f1, deps as deps1 } from "../../server/function-01-http-submit";
+import { runFunction as f2, deps as deps2 } from "../../server/function-02-process";
+import { mockStripeConstructor } from "../../lib/stripe.mock";
+import * as Stripe from "../../lib/stripe.types";
 
 let nextFid = 0;
 
@@ -29,6 +29,8 @@ export function createFixture() {
         stripeCheckoutToken: 'stripeCheckoutToken1234',
         stripeCustomerId: 'stripeCustomerId1234',
         stripeChargeId: 'stripeChargeId1234',
+        stripePlanId: 'stripePlanId1234',
+        stripeSubscriptionId: 'stripeSubscriptionId1234',
 
         chargeAmount: 10099,
         monthlyAmount: 1099,
@@ -40,9 +42,18 @@ export function createFixture() {
         stripeCustomer: {
             id: mv_a.stripeCustomerId
         } as Stripe.StripeCustomer,
+
         stripeCharge: {
             id: mv_a.stripeChargeId,
         } as Stripe.StripeCharge,
+
+        stripePlan: {
+            id: mv_a.stripePlanId,
+        } as Stripe.StripePlan,
+
+        stripeSubscription: {
+            id: mv_a.stripeSubscriptionId,
+        } as Stripe.StripeSubscription,
 
         saveEntity_result: {},
 
@@ -68,6 +79,8 @@ export function createFixture() {
 
         stripe_createCustomer: (args: { email: string; source: string; }) => { },
         stripe_createCharge: (args: { customer: string; amount: number; }) => { },
+        stripe_createPlan: (args: { amount: number; }) => { },
+        stripe_createSubscription: (args: { customer: string; plan: string; }) => { },
 
         storage_saveEntity: (args: { tableName: string, partitionKey: string, rowKey: string, values: { [key: string]: string | boolean | number | Date } }) => { },
     };
@@ -120,13 +133,37 @@ export function createFixture() {
                 }
                 return null;
             }
-        }
+        },
+        plans: {
+            create(args) {
+                callbacks.stripe_createPlan(args);
+
+                if (args.amount === mv.monthlyAmount) {
+                    return mv.stripePlan;
+                }
+                return null;
+            },
+            retrieve(args) {
+                return null;
+            }
+        },
+        subscriptions: {
+            create(args) {
+                callbacks.stripe_createSubscription(args);
+
+                if (args.customer == mv.stripeCustomerId
+                    && args.plan == mv.stripePlanId) {
+                    return mv.stripeSubscription;
+                }
+                return null;
+            }
+        },
     });
 
     deps1.getServerCheckoutId = () => mv.serverCheckoutId;
     deps2.Stripe = stripeConstructor;
     deps2.saveEntity = async (tableName, partitionKey, rowKey, values) => {
-        callbacks.storage_saveEntity({ tableName, partitionKey, rowKey, values });
+        await callbacks.storage_saveEntity({ tableName, partitionKey, rowKey, values });
         return mv.saveEntity_result as any;
     }
 

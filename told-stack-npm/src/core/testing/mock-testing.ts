@@ -9,13 +9,22 @@ export function createTester<T>(test: (name: string, run: () => Promise<void>) =
     }
 
     const should = async (goal: string, run: (fixture: T) => void) => {
-        console.log(`SHOULD: ${goal}`);
-        test(goal, async () => await run(createFixture()));
+        console.log(` SHOULD: ${goal}`);
+        test(goal, async () => {
+            await run(createFixture());
+            console.log(` PASS: ${goal}`);
+        });
+    }
+
+    const through = async (subject: string, run: () => void) => {
+        console.log(`  THROUGH: ${subject}`);
+        await run();
     }
 
     return {
         describe,
         should,
+        through,
     };
 }
 

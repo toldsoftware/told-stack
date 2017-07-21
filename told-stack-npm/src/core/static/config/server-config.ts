@@ -4,7 +4,6 @@ import { HttpFunctionRequest } from "../../types/functions";
 
 
 export interface FunctionTemplateConfig {
-    storageConnection: string;
     http_route: string;
 }
 
@@ -13,17 +12,17 @@ export interface HttpFunction_BindingData {
 
 export interface ServerConfigType {
     getPath(req: HttpFunctionRequest): string;
+    injectSettingsPrefix: string;
 }
 
 export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
 
-    storageConnection = this.default_storageConnectionString_AppSettingName;
     http_route = this.apiRoute;
 
     constructor(
+        public injectSettingsPrefix = 'INJECT_',
         private pathToStatic = '../static',
         private apiRoute = 'api/static',
-        private default_storageConnectionString_AppSettingName = 'AZURE_STORAGE_CONNECTION_STRING',
     ) {
 
     }

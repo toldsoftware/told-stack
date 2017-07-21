@@ -1,7 +1,7 @@
 import { ClientConfig } from "@told/stack/src/payment/stripe/config/client-config";
 
 export const clientConfig = new ClientConfig({
-    stripePublishableKey: 'pk_test_hB4VRQY8ICsC6mVsRo8jjnIh',
+    stripePublishableKey: 'pk_stripe_publishable_key_1234',
     checkoutOptions: {
         business: {
             name: 'Told Software',
@@ -16,4 +16,4 @@ export const clientConfig = new ClientConfig({
             allowRememberMe: true
         },
     },
-}, async () => null);
+}, async () => ({ userToken: 'userToken42' }));

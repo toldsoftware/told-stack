@@ -1,12 +1,13 @@
 import * as webpack from 'webpack';
 import { entries } from "../config/src/entries-server";
+import { testEntries } from "../config/src/tests-server";
 import { webpack_generateEntry } from '@told/stack/src/build/webpack-generate-entry';
 
 // Use Nodemon to monitor this for changes
 // See package.json
 // npm start 
 // https://github.com/webpack/webpack-dev-server/issues/440
-const entry = webpack_generateEntry(__dirname, entries, '../_deploy');
+const entry = webpack_generateEntry(__dirname, entries, '../_deploy', '_intermediate', testEntries, '../_deploy_testing', '_intermediate_tests');
 
 const config: webpack.Configuration = {
     // entry: {

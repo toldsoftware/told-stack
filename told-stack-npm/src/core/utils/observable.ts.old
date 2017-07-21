@@ -1,0 +1,139 @@
+const O = require('zen-observable') as any;
+
+export type Observer<T> = SubscriptionObserver<T>;
+
+export class Observable<T> implements ObservableClass<T> {
+    static from<T>(observable: ObservableClass<T> | ObservableLike<T> | ArrayLike<T>): ObservableClass<T> {
+        return O.from(observable);
+    }
+    static of<T>(...items: T[]): ObservableClass<T> {
+        return O.of(...items);
+    }
+
+    public _inner: ObservableClass<T>;
+
+    constructor(subscriber: Subscriber<T>) {
+        this._inner = new O(subscriber);
+    }
+
+    subscribe(observer: SubscriptionObserver<T>): Subscription;
+    subscribe(onNext: (value: T) => void, onError?: (error: any) => void, onComplete?: () => void): Subscription;
+    subscribe(onNext: any, onError?: any, onComplete?: any) {
+        return this._inner.subscribe(onNext, onError, onComplete);
+    }
+    forEach(callback: (value: T) => void): Promise<void> {
+        return this._inner.forEach(callback);
+    }
+    map<R>(callback: (value: T) => R): ObservableClass<R> {
+        return this._inner.map(callback);
+    }
+    filter(callback: (value: T) => boolean): ObservableClass<T> {
+        return this._inner.filter(callback);
+    }
+    reduce(callback: (previousValue: T, currentValue: T) => T, initialValue?: T): ObservableClass<T>;
+    reduce<R>(callback: (previousValue: R, currentValue: T) => R, initialValue?: R): ObservableClass<R>;
+    reduce(callback: any, initialValue?: any) {
+        return this._inner.reduce(callback, initialValue);
+    }
+    flatMap<R>(callback: (value: T) => ObservableLike<R>): ObservableClass<R> {
+        return this._inner.flatMap(callback);
+    }
+}
+
+// Types:
+// Based on @types/zen-observables
+
+interface SubscriptionObserver<T> {
+    closed: boolean;
+    next(value: T): void;
+    error(errorValue: any): void;
+    complete(): void;
+}
+
+interface ObservableModule {
+    from<T>(observable: ObservableClass<T> | ObservableLike<T> | ArrayLike<T>): ObservableClass<T>;
+    of<T>(...items: T[]): ObservableClass<T>;
+};
+
+interface ObservableClass<T> {
+    // constructor(subscriber: Subscriber<T>);
+
+    subscribe(observer: Observer<T>): Subscription;
+    subscribe(onNext: (value: T) => void, onError?: (error: any) => void, onComplete?: () => void): Subscription;
+
+    // [Symbol.observable](): Observable<T>;
+
+    forEach(callback: (value: T) => void): Promise<void>;
+    map<R>(callback: (value: T) => R): ObservableClass<R>;
+    filter(callback: (value: T) => boolean): ObservableClass<T>;
+    reduce(callback: (previousValue: T, currentValue: T) => T, initialValue?: T): ObservableClass<T>;
+    reduce<R>(callback: (previousValue: R, currentValue: T) => R, initialValue?: R): ObservableClass<R>;
+    flatMap<R>(callback: (value: T) => ObservableLike<R>): ObservableClass<R>;
+};
+
+interface ObservableLike<T> {
+    subscribe?: Subscriber<T>;
+    // [Symbol.observable](): Observable<T> | ObservableLike<T>;
+}
+
+type Subscriber<T> = (observer: SubscriptionObserver<T>) => void | (() => void) | Subscription;
+
+interface Subscription {
+    closed: boolean;
+    unsubscribe(): void;
+}
+
+// declare global {
+//     interface SymbolConstructor {
+//         observable: symbol;
+//     }
+// }
+
+// declare global {
+//     namespace ZenObservable {
+//         interface SubscriptionObserver<T> {
+//             closed: boolean;
+//             next(value: T): void;
+//             error(errorValue: any): void;
+//             complete(): void;
+//         }
+
+//         interface Subscription {
+//             closed: boolean;
+//             unsubscribe(): void;
+//         }
+
+//         interface Observer<T> {
+//             start?(subscription: Subscription): any;
+//             next?(value: T): void;
+//             error?(errorValue: any): void;
+//             complete?(): void;
+//         }
+
+//         type Subscriber<T> = (observer: SubscriptionObserver<T>) => void | (() => void) | Subscription;
+
+//         interface ObservableLike<T> {
+//             subscribe?: Subscriber<T>;
+//             [Symbol.observable](): Observable<T> | ObservableLike<T>;
+//         }
+//     }
+// }
+
+// declare class Observable<T> {
+//     constructor(subscriber: ZenObservable.Subscriber<T>)
+
+//     subscribe(observer: ZenObservable.Observer<T>): ZenObservable.Subscription;
+//     subscribe(onNext: (value: T) => void, onError?: (error: any) => void, onComplete?: () => void): ZenObservable.Subscription;
+
+//     [Symbol.observable](): Observable<T>;
+
+//     forEach(callback: (value: T) => void): Promise<void>;
+//     map<R>(callback: (value: T) => R): Observable<R>;
+//     filter(callback: (value: T) => boolean): Observable<T>;
+//     reduce(callback: (previousValue: T, currentValue: T) => T, initialValue?: T): Observable<T>;
+//     reduce<R>(callback: (previousValue: R, currentValue: T) => R, initialValue?: R): Observable<R>;
+//     flatMap<R>(callback: (value: T) => ZenObservable.ObservableLike<R>): Observable<R>;
+// }
+
+
+// export = Observable;

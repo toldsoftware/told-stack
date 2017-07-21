@@ -33,6 +33,9 @@ export async function saveEntity(tableName: string, partitionKey: string, rowKey
         aliases = aliases.map(x => x.toLowerCase());
     }
 
+    // Ensure Table Exists
+    await asyncIt(cb => tableService.createTableIfNotExists(tableName, cb));
+
     // Save Data
     const entity = convertToEntity(tableService, partitionKey, rowKey, values);
     const result = await asyncIt<TableService.EntityMetadata>(cb => tableService.insertOrMergeEntity(tableName, entity, {}, cb));
@@ -46,7 +49,7 @@ export async function saveEntity(tableName: string, partitionKey: string, rowKey
     return result;
 }
 
-export async function loadEntity(tableName: string, partitionKey: string, rowKeyOrAlias: string) {
+export async function loadEntity_parse<T>(tableName: string, partitionKey: string, rowKeyOrAlias: string, shouldAutoParseJson = true): Promise<T> {
     const tableService = createTableService();
 
     if (FORCE_LOWER_CASE) {
@@ -70,7 +73,20 @@ export async function loadEntity(tableName: string, partitionKey: string, rowKey
             _ageMs: Date.now() - timestamp,
         };
 
-        return { ...entity, ...metadata } as typeof entity & typeof metadata;
+        const data = entity;
+
+        if (shouldAutoParseJson) {
+            for (let k in data) {
+                const x = data[k];
+                if (typeof x === 'string') {
+                    try {
+                        data[k] = JSON.parse(x);
+                    } catch (err) { }
+                }
+            }
+        }
+
+        return { ...data, ...metadata } as typeof entity & typeof metadata & T;
     } catch (err) {
         console.warn(err);
 

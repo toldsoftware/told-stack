@@ -19,9 +19,8 @@ function buildFunction(config: FunctionTemplateConfig) {
 export const createFunctionJson = (config: FunctionTemplateConfig) => build_createFunctionJson(config, buildFunction);
 
 export const runFunction = build_runFunction_http(buildFunction, (config: ServerConfigType, context, req) => {
-    context.log('START');
-
     const data = context.bindings.inStripeCheckoutTable;
+    context.log('START', { data , bindingData: context.bindingData });
 
     if (!data) {
         context.res = {

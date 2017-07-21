@@ -21,6 +21,7 @@
   "include": [
     "./src/**/*",
     "./config/**/*",
-    "./build/**/*"
+    "./build/**/*",
+    "webpack.config.ts"
   ]
 }

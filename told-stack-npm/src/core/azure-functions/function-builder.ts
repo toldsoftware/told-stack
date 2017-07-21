@@ -146,7 +146,7 @@ export function buildFunction_http<TBindingData, TRequestQuery = {}, TRequestBod
     //     direction: 'out'
     // },
 
-    const b = new FunctionBuilder({});
+    const b = new FunctionBuilder(options.bindingData);
     const b2 = b.bindings(t => ({
         req: {
             type: 'httpTrigger',

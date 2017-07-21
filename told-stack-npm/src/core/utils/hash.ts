@@ -12,7 +12,7 @@ export function hashEmail_partial(email: string) {
 }
 
 export function hash(text: string): number {
-    return [...text].reduce((hash, c) => {
+    return text.split('').reduce((hash, c) => {
         const code = c.charCodeAt(0);
         hash = ((hash << 5) - hash) + code;
         return hash | 0;

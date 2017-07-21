@@ -42,3 +42,19 @@ export function clearInterval_exponentialBackoff(id: number) {
     clearTimeout(ids[id]);
     ids[id] = CANCEL;
 }
+
+export function maxTimeout<T>(maxTimeMs: number, run: () => Promise<T>) {
+    return new Promise<T>((resolve, reject) => {
+        const id = setTimeout(() => {
+            reject("TIMED OUT");
+        }, maxTimeMs);
+
+        run().then(t => {
+            clearTimeout(id);
+            resolve(t);
+        }).catch((err) => {
+            clearTimeout(id);
+            reject(err);
+        });
+    });
+}

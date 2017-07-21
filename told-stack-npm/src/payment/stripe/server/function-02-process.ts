@@ -1,8 +1,8 @@
 import { buildFunction_common, build_binding, build_runFunction_common, build_createFunctionJson } from "../../../core/azure-functions/function-builder";
 import { FunctionTemplateConfig, ServerConfigType, ProcessQueue, StripeCheckoutTable, StripeCheckoutRuntimeConfig, StripeCustomerLookupTable, StripeUserLookupTable, processQueueTrigger, GetUserResultError } from "../config/server-config";
-import { SubscriptionStatus, PaymentStatus, DeliverableStatus, CheckoutStatus } from "../../common/checkout-types";
+import { SubscriptionStatus, PaymentStatus, DeliverableStatus, CheckoutStatus, DeliverableStatus_ExecutionResult } from "../../common/checkout-types";
 import { saveEntity as _saveEntity } from "../../../core/utils/azure-storage-sdk/tables";
-import { Stripe as _Stripe, StripeCustomer } from "../config/stripe";
+import { Stripe as _Stripe, StripeCustomer, StripePlan } from "../lib/stripe";
 
 export const deps = {
     saveEntity: _saveEntity,
@@ -30,23 +30,31 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
     const q = context.bindings.inProcessQueueTrigger;
 
     const saveData = async (data: Partial<StripeCheckoutTable>) => {
-        context.log('Processing', { paymentpaymentStatus: data.paymentStatus, data });
+        try {
+            // Log History
+            const b = config.getBinding_stripeCheckoutTable_fromTrigger(q);
+            const changedRowKey = `${b.rowKey}_LOG-${Date.now()}`;
 
-        // Log History
-        const b = config.getBinding_stripeCheckoutTable_fromTrigger(q);
+            // context.log('saveData START', { paymentStatus: data.paymentStatus, data, b, changedRowKey });
 
-        await deps.saveEntity(
-            b.tableName,
-            b.partitionKey,
-            `${b.rowKey}_at-${Date.now()}`,
-            { ...data, isLog: true } as any);
+            await deps.saveEntity(
+                b.tableName,
+                b.partitionKey,
+                changedRowKey,
+                { ...data, isLog: true } as any);
 
-        // Save Main
-        await deps.saveEntity(
-            b.tableName,
-            b.partitionKey,
-            b.rowKey,
-            data as any);
+            // Save Main
+            await deps.saveEntity(
+                b.tableName,
+                b.partitionKey,
+                b.rowKey,
+                data as any);
+
+            // context.log('saveData END', { paymentStatus: data.paymentStatus, data, b, changedRowKey });
+
+        } catch (error) {
+            return context.done({ message: 'saveData FAILED', error });
+        }
     };
 
     // Restart the process only if the user required login
@@ -59,15 +67,26 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
         } else {
             return context.done({ error: 'Entity Already Exists', q });
         }
+    } else {
+        // New Request
+        await saveData({
+            emailHash: context.bindingData.emailHash,
+            serverCheckoutId: context.bindingData.serverCheckoutId,
+            clientCheckoutId: q.request.clientCheckoutId,
+            request: q.request,
+            checkoutStatus: CheckoutStatus.Submitted,
+        });
     }
 
+    const stripe = deps.Stripe(config.getStripeSecretKey());
+    let customer: StripeCustomer = null;
+    let userId: string = null;
+
     try {
+        // Execute Charge With Stripe
         await saveData({
             paymentStatus: PaymentStatus.Processing,
         });
-
-        // Execute Charge With Stripe
-        const stripe = deps.Stripe(config.getStripeSecretKey());
 
         // Lookup Existing Customer using Email
         const customerLookup = context.bindings.inStripeCustomerLookupTable;
@@ -77,9 +96,6 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
         // ??? if User & !Customer => Invalid (Unknown Customer) => New Customer => Attach to User 
         // ? if !User && Customer => Unclaimed Customer (Previous Payment with No User Account Attached) => New User => Attach to User
         // ? if User && Customer => Verify User is Correct => Existing Customer
-
-        let customer: StripeCustomer = null;
-        let userId: string = null;
 
         if (!customerLookup && !userLookup) {
 
@@ -129,6 +145,7 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
         await saveData({
             // paymentStatus: PaymentStatus.CustomerCreated,
             customer,
+            userId,
         });
 
         const charge = await stripe.charges.create({
@@ -149,80 +166,85 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
         await saveData({
             paymentStatus: PaymentStatus.PaymentFailed,
             error,
-            timeFailed: Date.now(),
+            // timeFailed: Date.now(),
         });
 
         return context.done({ message: 'ProcessingPaymentFailed', error });
     }
 
-    // throw 'Not Implemented';
+    try {
+        // Subscribe
+        await saveData({
+            subscriptionStatus: SubscriptionStatus.Processing,
+        });
 
-    // try {
+        const planId = `${q.request.checkoutOptions.product.subscriptionPlanId_noPrice}-m-${q.request.checkoutOptions.product.monthlyAmountCents}`;
+        let foundPlan: StripePlan = null;
+        try {
+            foundPlan = await stripe.plans.retrieve(planId);
+        } catch (err) {
+            // No Plan Found?
+        }
 
-    //     // Subscribe
-    //     await saveData({
-    //         subscriptionStatus: SubscriptionStatus.Processing,
-    //     });
+        const plan = foundPlan || await stripe.plans.create({
+            amount: q.request.checkoutOptions.product.monthlyAmountCents,
+            currency: 'usd',
+            interval: 'month',
+            name: q.request.checkoutOptions.product.subscriptionPlanName,
+            id: planId,
+            trial_period_days: 30,
+            statement_descriptor: q.request.statementDescriptor_subscription,
+        });
 
-    //     const planId = `${q.request.checkoutOptions.product.subscriptionPlanId_noPrice}-m-${q.request.checkoutOptions.product.monthlyAmountCents}`;
-    //     const foundPlan = await stripe.plans.retrieve(planId);
+        const subscription = await stripe.subscriptions.create({
+            customer: customer.id,
+            plan: plan.id,
+            metadata: q.request.metadata,
+        });
 
-    //     const plan = foundPlan || await stripe.plans.create({
-    //         amount: q.request.checkoutOptions.product.monthlyAmountCents,
-    //         currency: 'usd',
-    //         interval: 'month',
-    //         name: q.request.checkoutOptions.product.subscriptionPlanName,
-    //         id: planId,
-    //         trial_period_days: 30,
-    //         statement_descriptor: q.request.statementDescriptor_subscription,
-    //     });
+        await saveData({
+            subscriptionStatus: SubscriptionStatus.Subscribed_TrialPeriod,
+            plan,
+            subscription,
+        });
 
-    //     const subscription = await stripe.subscriptions.create({
-    //         customer: customer.id,
-    //         plan: plan.id,
-    //         metadata: q.request.metadata,
-    //     });
+    } catch (error) {
+        await saveData({
+            // paymentStatus: PaymentStatus.PaymentFailed,
+            subscriptionStatus: SubscriptionStatus.SubscriptionFailed,
+            error,
+            // timeFailed: Date.now(),
+        });
 
-    //     await saveData({
-    //         subscriptionStatus: SubscriptionStatus.Subscribed_TrialPeriod,
-    //         plan,
-    //         subscription,
-    //     });
+        return context.done({ message: 'SubscriptionFailed', error });
+    }
 
-    // } catch (error) {
-    //     await saveData({
-    //         // paymentStatus: PaymentStatus.PaymentFailed,
-    //         subscriptionStatus: SubscriptionStatus.SubscriptionFailed,
-    //         error,
-    //         timeFailed: Date.now(),
-    //     });
+    try {
+        // Process Request
+        // await saveData({
+        //     deliverableStatus: DeliverableStatus.Processing,
+        // });
 
-    //     return context.done({ message: 'SubscriptionFailed', error });
-    // }
+        await saveData({
+            deliverableStatus: DeliverableStatus.Enabled,
+        });
 
-    // try {
-    //     // Process Request
-    //     await saveData({
-    //         deliverableStatus: DeliverableStatus.Processing,
-    //     });
+        await config.runtime.executeRequest(q.request);
 
-    //     await config.processRequest(q.request);
+        await saveData({
+            deliverableStatus_executionResult: DeliverableStatus_ExecutionResult.Enabled,
+            // timeSucceeded: Date.now(),
+        });
+    } catch (error) {
+        await saveData({
+            deliverableStatus_executionResult: DeliverableStatus_ExecutionResult.Error,
+            error,
+            // timeFailed: Date.now(),
+        });
 
-    //     await saveData({
-    //         paymentStatus: PaymentStatus.ProcessingSucceeded,
-    //         timeSucceeded: Date.now(),
-    //     });
-    // } catch (error) {
-    //     await saveData({
-    //         deliverableStatus: DeliverableStatus.,
-    //         paymentStatus: PaymentStatus.ProcessingExecutionFailed,
-    //         error,
-    //         timeFailed: Date.now(),
-    //     });
+        return context.done({ message: 'ProcessingExecutionFailed', error });
+    }
 
-    //     return context.done({ message: 'ProcessingExecutionFailed', error });
-    // }
-
-    // context.log('DONE');
-    // context.done();
+    context.log('DONE');
+    context.done();
 });

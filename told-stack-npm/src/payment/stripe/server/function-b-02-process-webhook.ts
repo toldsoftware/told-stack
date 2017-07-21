@@ -4,7 +4,7 @@ import { insertOrMergeTableEntity_sdk } from "../../../core/utils/azure-storage-
 import { saveEntity, doesEntityExist } from "../../../core/utils/azure-storage-sdk/tables";
 import { CheckoutStatus, SubscriptionStatus } from "../../common/checkout-types";
 
-import { Stripe as _Stripe } from "../config/stripe";
+import { Stripe as _Stripe } from "../lib/stripe";
 
 export const deps = {
     Stripe: _Stripe,

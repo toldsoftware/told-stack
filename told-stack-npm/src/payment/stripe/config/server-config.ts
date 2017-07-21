@@ -1,6 +1,6 @@
 import { ClientConfig, CheckoutSubmitRequestBody } from "./client-config";
 import { CheckoutStatus, SubscriptionStatus, CheckoutResult } from "../../common/checkout-types";
-import { Stripe, StripeCharge, StripeCustomer, StripePlan, StripeSubscription, StripeEvent } from "./stripe";
+import { Stripe, StripeCharge, StripeCustomer, StripePlan, StripeSubscription, StripeEvent } from "../lib/stripe";
 import { QueueBinding, TableBinding } from "../../../core/types/functions";
 import { createTrigger } from "../../../core/azure-functions/function-builder";
 export { CheckoutSubmitRequestBody };
@@ -35,15 +35,21 @@ export interface StripeCheckoutTable extends CheckoutResult {
     PartitionKey: string;
     RowKey: string;
 
+    emailHash: string;
+    clientCheckoutId: string;
+    serverCheckoutId: string;
+    request: CheckoutSubmitRequestBody;
+
+    userId?: string,
     customer?: StripeCustomer,
     charge?: StripeCharge,
     plan?: StripePlan,
     subscription?: StripeSubscription,
 
-    request: CheckoutSubmitRequestBody;
-    timeRequested: number;
-    timeSucceeded?: number;
-    timeFailed?: number;
+    
+    // timeRequested: number;
+    // timeSucceeded?: number;
+    // timeFailed?: number;
     error?: string;
 }
 
@@ -94,9 +100,20 @@ export interface StripeCheckoutRuntimeConfig {
 
 export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
 
-    runtime = this.runtimeConfig;
-
+    // The SDK Depends on this setting (It cannot be changed with ensuring the SDK requires it to be set)
+    private default_storageConnectionString_AppSettingName = 'AZURE_STORAGE_CONNECTION_STRING';
     private storageConnection = this.default_storageConnectionString_AppSettingName;
+
+    constructor(
+        private clientConfig: ClientConfig,
+        private runtimeConfig: StripeCheckoutRuntimeConfig,
+        private stripeSecretKey_AppSettingName = 'STRIPE_SECRET_KEY',
+        private stripeWebhookSigningSecret_AppSettingName = 'STRIPE_WEBHOOK_SIGNING_SECRET',
+    ) {
+
+    }
+
+    runtime = this.runtimeConfig;
 
     submit_route = this.clientConfig.submit_route;
     status_route = this.clientConfig.status_route;
@@ -119,8 +136,8 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
     getBinding_stripeCheckoutTable_fromTrigger(trigger: typeof processQueueTrigger): TableBinding {
         return {
             tableName: 'stripe',
-            partitionKey: `${trigger.emailHash}`,
-            rowKey: `${trigger.serverCheckoutId}`,
+            partitionKey: trigger.emailHash && `${trigger.emailHash}` || undefined,
+            rowKey: trigger.serverCheckoutId && `${trigger.serverCheckoutId}` || undefined,
             connection: this.storageConnection
         };
     }
@@ -144,15 +161,6 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
         };
     }
 
-    constructor(
-        private clientConfig: ClientConfig,
-        private runtimeConfig: StripeCheckoutRuntimeConfig,
-        private default_storageConnectionString_AppSettingName = 'AZURE_STORAGE_CONNECTION_STRING',
-        private stripeSecretKey_AppSettingName = 'STRIPE_SECRET_KEY',
-        private stripeWebhookSigningSecret_AppSettingName = 'STRIPE_WEBHOOK_SIGNING_SECRET',
-    ) {
-
-    }
 
     getEmailHash = this.clientConfig.getEmailHash;
 

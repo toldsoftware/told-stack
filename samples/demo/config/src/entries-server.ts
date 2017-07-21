@@ -33,7 +33,7 @@ export const entries: EntryInfo[] = [
     { name: 'stripe-checkout-01-http-submit', import: '@told/stack/src/payment/stripe/server/function-01-http-submit', configImport: './payment/stripe-server' },
     { name: 'stripe-checkout-02-process', import: '@told/stack/src/payment/stripe/server/function-02-process', configImport: './payment/stripe-server' },
     { name: 'stripe-checkout-03-http-status', import: '@told/stack/src/payment/stripe/server/function-03-http-status', configImport: './payment/stripe-server' },
-    { name: 'stripe-checkout-04-http-webhook', import: '@told/stack/src/payment/stripe/server/function-04-http-webhook', configImport: './payment/stripe-server' },
+    // { name: 'stripe-checkout-04-http-webhook', import: '@told/stack/src/payment/stripe/server/function-04-http-webhook', configImport: './payment/stripe-server' },
     // { name: 'stripe-checkout-05-process-webhook', import: '@told/stack/src/payment/stripe/server/function-05-process-webhook', configImport: './payment/stripe-server' },
 
 ];

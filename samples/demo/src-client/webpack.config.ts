@@ -12,11 +12,11 @@
 import * as webpack from 'webpack';
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 const BrowserSyncPlugin = require('browser-sync-webpack-plugin');
-const connect_gzip_static = require('connect-gzip-static');
+// const connect_gzip_static = require('connect-gzip-static');
 
 const enableBundleVisualizer = false;
 const enableBrowserSync = true;
-const enableBrowserSyncGzip = false; // Doesn't work
+// const enableBrowserSyncGzip = false; // Doesn't work
 
 const isProduction = true;
 const enableProduction_sourceMaps = true;
@@ -93,28 +93,28 @@ if (isProduction) {
 }
 
 if (enableBrowserSync) {
-    if (!enableBrowserSyncGzip) {
-        plugins.push(new BrowserSyncPlugin({
-            host: 'localhost',
-            port: 3100,
-            server: {
-                baseDir: [hostPath]
-            }
-        }));
-    } else {
-        plugins.push(new BrowserSyncPlugin({
-            host: 'localhost',
-            port: 3100,
-            server: {
-                baseDir: [hostPath]
-            },
-            callback: (err: any, bs: any) => {
-                bs.addMiddleware('*', connect_gzip_static(buildPath), {
-                    override: true
-                });
-            }
-        }));
-    }
+    //if (!enableBrowserSyncGzip) {
+    plugins.push(new BrowserSyncPlugin({
+        host: 'localhost',
+        port: 3100,
+        server: {
+            baseDir: [hostPath]
+        }
+    }));
+    // } else {
+    //     plugins.push(new BrowserSyncPlugin({
+    //         host: 'localhost',
+    //         port: 3100,
+    //         server: {
+    //             baseDir: [hostPath]
+    //         },
+    //         callback: (err: any, bs: any) => {
+    //             bs.addMiddleware('*', connect_gzip_static(buildPath), {
+    //                 override: true
+    //             });
+    //         }
+    //     }));
+    // }
 }
 
 const config: webpack.Configuration = {

@@ -1,5 +1,6 @@
-import * as fs from 'fs';
+import * as fs from 'fs-extra';
 import * as path from 'path';
+
 import { asyncNode_noError, asyncNode } from "../core/utils/async-node";
 import { EntryInfoResolved, EntryInfo } from "../core/types/entry";
 import { joinImportPath } from "./join-import-path";
@@ -12,7 +13,7 @@ export async function buildFunctionJsonAndIndexFiles(options: {
 }, entries: EntryInfoResolved[]) {
     const destDir = options.destDir || deployDir;
     const destDirFullPath = path.resolve(destDir);
-    await ensureDirectoryExists(destDirFullPath);
+    await fs.ensureDir(destDirFullPath);
 
     console.log('buildFunctionJsonAndIndexFiles START', { destDirFullPath });
 
@@ -22,7 +23,7 @@ export async function buildFunctionJsonAndIndexFiles(options: {
 
         // Output to destDir
         const outDir = `${destDirFullPath}/${x.name}`;
-        await ensureDirectoryExists(outDir);
+        await fs.ensureDir(outDir);
         fs.writeFile(`${outDir}/function.json`, functionJsonFile, (err) => {
             if (err) { console.error('buildFunctionJsonAndIndexFiles writeFile ERROR', { err, file: `${outDir}/function.json` }); }
         });
@@ -44,7 +45,7 @@ export async function buildFunctionRunFile(options: {
     const destDir = options.intermediateDestDir || intermediateDir;
     const destDirFullPath = path.resolve(destDir);
 
-    await ensureDirectoryExists(destDirFullPath);
+    await fs.ensureDir(destDirFullPath);
 
     console.log('buildFunctionRunFile START', { destDirFullPath });
 
@@ -54,7 +55,7 @@ export async function buildFunctionRunFile(options: {
 
         // Output to destDir
         const outDir = `${destDirFullPath}/entries`;
-        await ensureDirectoryExists(outDir);
+        await fs.ensureDir(outDir);
         fs.writeFile(`${outDir}/${x.name}.ts`, functionJsonFile, (err) => {
             if (err) { console.error('buildFunctionRunFile writeFile ERROR', { err, file: `${outDir}/${x.name}.ts` }); }
         });
@@ -62,16 +63,6 @@ export async function buildFunctionRunFile(options: {
     }
 
     console.log('buildFunctionRunFile END', { destDirFullPath });
-}
-
-export async function ensureDirectoryExists(dir: string) {
-    const exists = await asyncNode_noError<boolean>(cb => fs.exists(dir, cb));
-    // console.log('ensureDirectoryExists ', { dir, exists });
-
-    if (!exists) {
-        console.log('ensureDirectoryExists MakeDirectory', { dir });
-        await asyncNode_noError(cb => fs.mkdir(dir, cb));
-    }
 }
 
 function getRunFunctionFile(entry: EntryInfo, configPath: string) {
