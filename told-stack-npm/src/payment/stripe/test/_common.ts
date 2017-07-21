@@ -1,7 +1,9 @@
 import { CheckoutSubmitRequestBody } from "../config/client-config";
 import { CheckoutOptions } from "../../common/checkout-types";
 
-export function createCheckoutOptions(testCode: string, userEmail: string): CheckoutOptions {
+export function createCheckoutOptions(testCode: string, userEmail: string, shouldUseNewProduct: boolean): CheckoutOptions {
+    const prodSuffix = shouldUseNewProduct ? `_${Date.now()}` : '';
+
     return {
         business: {
             name: 'Told Software',
@@ -18,24 +20,24 @@ export function createCheckoutOptions(testCode: string, userEmail: string): Chec
         product: {
             statementDescriptor: `t_${testCode}`,
             statementDescriptor_subscription: `t_${testCode}_sub`,
-            description: 'Test Product',
-            productCode: `t_${testCode}_product`,
+            description: `Test Product${prodSuffix}`,
+            productCode: `t_${testCode}_product${prodSuffix}`,
             amountCents: 10099,
             monthlyAmountCents: 1099,
-            subscriptionPlanId_noPrice: `t_sub_${testCode}_${Date.now()}`,
-            subscriptionPlanName: `T Sub ${testCode} ${Date.now()}`,
+            subscriptionPlanId_noPrice: `t_sub_${testCode}${prodSuffix}`,
+            subscriptionPlanName: `T Sub ${testCode}${prodSuffix}`,
         },
         user: { email: userEmail },
     };
 }
 
-export function createCheckoutSubmitRequestBody(clientCheckoutId: string, testCode: string, userEmail: string): { body: CheckoutSubmitRequestBody } {
+export function createCheckoutSubmitRequestBody(clientCheckoutId: string, testCode: string, userEmail: string, shouldUseNewProduct: boolean): { body: CheckoutSubmitRequestBody } {
     return {
         body: {
             clientCheckoutId,
             statementDescriptor: `t_${testCode}`,
             statementDescriptor_subscription: `t_${testCode}_sub`,
-            userToken: 'userToken1234',
+            userToken: `userToken1234_${Date.now()}`,
 
             // Stripe Token
             token: {
@@ -45,7 +47,7 @@ export function createCheckoutSubmitRequestBody(clientCheckoutId: string, testCo
             args: {},
             metadata: {},
 
-            checkoutOptions: createCheckoutOptions(testCode, userEmail),
+            checkoutOptions: createCheckoutOptions(testCode, userEmail, shouldUseNewProduct),
         }
     };
 }

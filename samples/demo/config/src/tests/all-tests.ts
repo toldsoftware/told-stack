@@ -69,7 +69,7 @@ export const runTests = async (log: typeof console.log, maxTimeMS = 5000) => {
                     const r = await t.run();
                     if (r.result === 'pass') {
                         // log(`=> PASS`);
-                        log(`=> PASS: ${t.name} (${Date.now() - startTime}ms) ${prefix}`);
+                        log(`=> PASS: ${t.name} @${Date.now() - startTime}ms ${prefix}`);
                         return;
                     }
 

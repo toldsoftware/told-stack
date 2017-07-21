@@ -7,6 +7,9 @@ export class TestConfig {
     constructor(
         public clientConfig: ClientConfig,
         public serverConfig: ServerConfig,
+        public options: {
+            shouldUseNewProduct: boolean
+        },
     ) {
 
     }

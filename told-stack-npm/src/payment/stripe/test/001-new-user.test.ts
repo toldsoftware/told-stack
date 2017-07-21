@@ -6,8 +6,8 @@ import { delay } from "../../../core/utils/delay";
 import { CheckoutStatus, PaymentStatus, DeliverableStatus, DeliverableStatus_ExecutionResult } from "../../common/checkout-types";
 import { TestConfig } from "../config/test-config";
 
-export const test_001_new_user = createTest<TestConfig>(({ clientConfig, functionConfig, serverConfig }) => ({
-    name: 'A New User Should Purchase a Product',
+export const test_001_new_user = createTest<TestConfig>(({ clientConfig, functionConfig, serverConfig, options }) => ({
+    name: `A New User Should Purchase a Product (${options.shouldUseNewProduct ? 'New Product' : ''})`,
     run: async (assertInner, load, apiFetch, notifyFailure) => {
         let pass = true;
         const assert = <T>(title: string, actual: T, expected?: T) => {
@@ -17,12 +17,10 @@ export const test_001_new_user = createTest<TestConfig>(({ clientConfig, functio
             }
         };
 
-        // assert('Test Failure 0', false);
-
-        const testCode = '001newuser';
+        const testCode = `001newuser${options.shouldUseNewProduct ? 'P' : ''}`;
         const clientCheckoutId = `test_${testCode}_${Date.now()}`;
         const email = `${clientCheckoutId}@toldstack.com`;
-        const request = createCheckoutSubmitRequestBody(clientCheckoutId, testCode, email);
+        const request = createCheckoutSubmitRequestBody(clientCheckoutId, testCode, email, options.shouldUseNewProduct);
 
         const response = await apiFetch<CheckoutSubmitResult, CheckoutSubmitRequestBody>(
             clientConfig.getSubmitTokenUrl(),
@@ -52,8 +50,6 @@ export const test_001_new_user = createTest<TestConfig>(({ clientConfig, functio
         assert('Deliverable status should be enabled', statusResponse.deliverableStatus, DeliverableStatus.Enabled);
         assert('Deliverable execution result should be enabled', statusResponse.deliverableStatus_executionResult, DeliverableStatus_ExecutionResult.Enabled);
 
-        // assert('Test Failure 1', false);
-
         // Storage
         const userLookup = await load<StripeUserLookupTable>(
             functionConfig.getBinding_stripeUserLookupTable_fromTrigger({
@@ -80,8 +76,6 @@ export const test_001_new_user = createTest<TestConfig>(({ clientConfig, functio
         assert('Customer Checkout Table should have correct user', checkoutTable.userId, userLookup.userId);
         assert('Customer Checkout Table should have correct customer', checkoutTable.customer.id, customerLookup.customerId);
         assert('Customer Checkout Table should have correct clientCheckoutId', checkoutTable.clientCheckoutId, clientCheckoutId);
-
-        // assert('Test Failure 2', false);
 
         assert('Final checkout status should be submitted', checkoutTable.checkoutStatus, CheckoutStatus.Submitted);
         assert('Final payment status should be submitted', checkoutTable.paymentStatus, PaymentStatus.PaymentSuceeded);
