@@ -94,8 +94,8 @@ export function createFixture() {
                 executeRequest: async () => {
                     callbacks.process_executeRequest();
                 },
-                lookupUserByUserToken: async (userToken: string) => ({ userId: userToken == mv.userToken ? mv.userId : null }),
-                getOrCreateCurrentUserId: async (email) => ({ userId: email == mv.email ? mv.userId : null }),
+                lookupUser_sessionToken: async (userToken) => ({ userId: userToken == mv.userToken ? mv.userId : null, isAnonymousUser: false }),
+                lookupUser_stripeEmail: async (email) => ({ userId: email == mv.email ? mv.userId : null }),
             })
         } as Getter<StripeCheckoutRuntimeConfig>,
 

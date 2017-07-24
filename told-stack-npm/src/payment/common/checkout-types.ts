@@ -67,14 +67,30 @@ export enum CheckoutStatus {
     // The payment was rejected by the server (and not Queued)
     Submission_Failed = 'Submission_Failed',
 
+    // The Submission Requires User Action to Proceed
+    Submission_Paused = 'Submission_Paused',
+}
+
+export enum CheckoutPausedReason {
+    None = '',
+
     // The Submission Requires User Login with the Stripe Email
-    Submission_Rejected_LoginAndResubmit = 'Submission_Rejected_LoginAndResubmit',
+    EmailBelongsToAccount_LoginAndResubmit = 'EmailBelongsToAccount_LoginAndResubmit',
+
+    // User Id could not be found by provided Session Id: Make sure to request Session before submission
+    SessionNotFound_CreateNewSession = 'SessionNotFound_CreateNewSession',
+
+    // Email was Found, but Belongs to a Different User -> Login to Correct Account
+    EmailBelongsToOtherUser_LoginToCorrectAccount = 'EmailBelongsToOtherUser_LoginToCorrectAccount',
+
+    // Unknown Error Failed to Verify User
+    UnknownUserError_CreateNewSession = 'UnknownUserError_CreateNewSession',
 }
 
 export enum PaymentStatus {
     NotStarted = 'NotStarted',
     Processing = 'Processing',
-    Paused = 'Paused',
+    // Paused = 'Paused',
     PaymentSuceeded = 'PaymentSuceeded',
     PaymentFailed = 'PaymentFailed',
 
@@ -86,7 +102,7 @@ export enum SubscriptionStatus {
     NotStarted = 'NotStarted',
     Processing = 'Processing',
     SubscriptionFailed = 'SubscriptionFailed',
-    
+
     Subscribed_TrialPeriod = 'Subscribed_TrialPeriod',
     Subscribed_Normal = 'Subscribed',
 
@@ -130,6 +146,7 @@ export interface CheckoutResult {
     clientCheckoutId: string;
 
     checkoutStatus: CheckoutStatus;
+    checkoutPausedReason: CheckoutPausedReason;
     paymentStatus: PaymentStatus;
     subscriptionStatus: SubscriptionStatus;
     deliverableStatus: DeliverableStatus;

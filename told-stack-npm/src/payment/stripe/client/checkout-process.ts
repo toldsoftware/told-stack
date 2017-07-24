@@ -1,6 +1,6 @@
 import { Observable, Observer } from "../../../core/utils/observable";
-import { CheckoutProcess, CheckoutOptions, CheckoutProcessPrepareResult, CheckoutStatus, DeliverableStatus_ExecutionResult, PaymentStatus, DeliverableStatus, CheckoutResult_Client, SubscriptionStatus } from '../../common/checkout-types';
-import { ClientConfig, ClientRuntimeOptions, ClientConfigOptions, CheckoutSubmitResult, CheckoutStatusResult, CheckoutSubmitRequestBody } from "../config/client-config";
+import { CheckoutProcess, CheckoutOptions, CheckoutProcessPrepareResult, CheckoutStatus, DeliverableStatus_ExecutionResult, PaymentStatus, DeliverableStatus, CheckoutResult_Client, SubscriptionStatus, CheckoutPausedReason } from '../../common/checkout-types';
+import { ClientRuntimeConfig, ClientConfig, CheckoutSubmitResult, CheckoutStatusResult, CheckoutSubmitRequestBody } from "../config/client-config";
 import { StripeCheckoutAccess, StripeToken, StripeTokenArgs } from "./stripe-checkout-access";
 import { assignPartial } from "../../../core/utils/objects";
 import { uuid } from "../../../core/utils/uuid";
@@ -10,7 +10,7 @@ export class StripeCheckoutProcess implements CheckoutProcess {
 
     private _access: StripeCheckoutAccess;
 
-    constructor(private config: ClientConfigOptions, private runtime: ClientRuntimeOptions) {
+    constructor(private config: ClientConfig, private runtime: ClientRuntimeConfig) {
 
     }
 
@@ -26,13 +26,14 @@ export class StripeCheckoutProcess implements CheckoutProcess {
 
         console.log('StripeCheckoutProcess Setup Result Observer');
         const clientCheckoutId = uuid.v4();
-        const { userToken } = await this.config.getUserToken();
+        const { sessionToken } = await this.config.getSessionToken();
 
         let observer: Observer<CheckoutResult_Client>;
         let lastResult: CheckoutResult_Client = {
             serverCheckoutId: null,
             clientCheckoutId,
             checkoutStatus: CheckoutStatus.NotStarted,
+            checkoutPausedReason: CheckoutPausedReason.None,
             paymentStatus: PaymentStatus.NotStarted,
             subscriptionStatus: SubscriptionStatus.NotStarted,
             deliverableStatus: DeliverableStatus.NotStarted,
@@ -70,9 +71,9 @@ export class StripeCheckoutProcess implements CheckoutProcess {
 
             updateResult({ checkoutStatus: CheckoutStatus.Submitting });
 
-            const url = this.config.getSubmitTokenUrl();
+            const url = this.config.getServerUrl_submit();
             const data: CheckoutSubmitRequestBody = {
-                userToken,
+                sessionToken,
                 clientCheckoutId,
                 token,
                 args,
@@ -90,7 +91,7 @@ export class StripeCheckoutProcess implements CheckoutProcess {
             // Poll for Deliverable Status
             if (submitResult.checkoutStatus === CheckoutStatus.Submitted) {
 
-                const updateUrl = this.config.getCheckoutStatusUrl(data.token.email, submitResult.serverCheckoutId);
+                const updateUrl = this.config.getServerUrl_status(data.token.email, submitResult.serverCheckoutId);
 
                 const updateIntervalId = setInterval_exponentialBackoff(async () => {
                     const rStatus = await fetch(updateUrl);
@@ -98,7 +99,7 @@ export class StripeCheckoutProcess implements CheckoutProcess {
 
                     updateResult(submitResult);
 
-                    if (submitResult.checkoutStatus === CheckoutStatus.Submission_Rejected_LoginAndResubmit) {
+                    if (submitResult.checkoutStatus === CheckoutStatus.Submission_Paused) {
                         clearInterval_exponentialBackoff(updateIntervalId);
                         // TODO: Require Login and then resubmit with same payment token
                         throw 'Require Login - Not Implemented';

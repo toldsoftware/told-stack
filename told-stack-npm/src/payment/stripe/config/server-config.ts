@@ -46,7 +46,7 @@ export interface StripeCheckoutTable extends CheckoutResult {
     plan?: StripePlan,
     subscription?: StripeSubscription,
 
-    
+
     // timeRequested: number;
     // timeSucceeded?: number;
     // timeFailed?: number;
@@ -86,16 +86,15 @@ export interface ServerConfigType {
     getBinding_stripeCheckoutTable_fromTrigger(trigger: typeof processQueueTrigger): TableBinding;
 }
 
-export enum GetUserResultError {
-    NoError = '',
-    EmailBelongsToAnotherUser_RequireLogin = 'EmailBelongsToAnotherUser_RequireLogin',
-}
+// export enum GetUserResultError {
+//     NoError = '',
+//     EmailBelongsToAnotherUser_RequireLogin = 'EmailBelongsToAnotherUser_RequireLogin',
+// }
 
 export interface StripeCheckoutRuntimeConfig {
     executeRequest: (request: CheckoutSubmitRequestBody) => Promise<void>;
-
-    lookupUserByUserToken(userToken: string): Promise<{ userId: string }>;
-    getOrCreateCurrentUserId(stripeEmail: string): Promise<{ userId: string, error?: GetUserResultError }>;
+    lookupUser_sessionToken(userToken: string): Promise<{ userId: string, isAnonymousUser: boolean }>;
+    lookupUser_stripeEmail(stripeEmail: string): Promise<{ userId: string }>;
 }
 
 export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {

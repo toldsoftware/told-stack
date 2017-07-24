@@ -1,63 +1,24 @@
-import { HttpFunctionRequest, HttpFunctionResponse, HttpFunctionRequest_ClientInfo } from "../../types/functions";
-import { FunctionTemplateConfig, ServerConfigType, HttpFunction_BindingData, LogQueueMessage } from "../config/server-config";
+import { buildFunction_http, build_binding, build_runFunction_http, build_createFunctionJson } from "../../azure-functions/function-builder";
+import { FunctionTemplateConfig, ServerConfigType, HttpFunction_BindingData, LogQueue } from "../config/server-config";
 import { LogItem } from "../config/types";
 import { group, groupToArray } from "../../utils/objects";
+import { HttpFunctionRequest_ClientInfo } from "../../types/functions";
 
-export function createFunctionJson(config: FunctionTemplateConfig) {
-    return {
-        bindings: [
-            {
-                name: "req",
-                type: "httpTrigger",
-                direction: "in",
-                authLevel: "anonymous",
-                route: config.http_route
-            },
-            {
-                name: "res",
-                type: "http",
-                direction: "out"
-            },
-            {
-                name: "outLogQueue",
-                type: "queue",
-                direction: "out",
-                queueName: config.logQueue_queueName,
-                connection: config.storageConnection
-            },
-            // {
-            //     name: "outLogOversizeQueue",
-            //     type: "queue",
-            //     direction: "out",
-            //     queueName: config.logOversizeQueue_queueName,
-            //     connection: config.storageConnection
-            // },
-            // {
-            //     name: "outLogOversizeBlob",
-            //     type: "blob",
-            //     direction: "out",
-            //     path: config.logOversizeBlob_path,
-            //     connection: config.storageConnection
-            // },
-        ],
-        disabled: false
-    };
+function buildFunction(config: FunctionTemplateConfig) {
+    return buildFunction_http({
+        route: config.http_route
+    })
+        .bindings(t => ({
+            outLogQueue: build_binding<LogQueue[]>(config.getBinding_logQueue())
+        }));
 }
 
-export async function runFunction(config: ServerConfigType, context: {
-    log: typeof console.log,
-    done: () => void,
-    res: HttpFunctionResponse,
-    bindingData: HttpFunction_BindingData,
-    bindings: {
-        outLogQueue: LogQueueMessage | LogQueueMessage[],
-        outLogOversizeQueue: string,
-        outLogOversizeBlob: LogQueueMessage,
-    }
-}, req: HttpFunctionRequest) {
+export const createFunctionJson = (config: FunctionTemplateConfig) => build_createFunctionJson(config, buildFunction);
+
+export const runFunction = build_runFunction_http(buildFunction, (config: ServerConfigType, context, req) => {
     context.log('START');
 
-    // Handle Max Queue Size (64kb) -> Put in a blob
+    // Only Supports Max Queue Size (64kb)
     const items = JSON.parse(req.body) as LogItem[];
 
     if (!items) {
@@ -77,7 +38,6 @@ export async function runFunction(config: ServerConfigType, context: {
 
     context.log(`Received ${items.length} log items`);
 
-    // if (JSON.stringify(items).length < this.config.maxQueueSize) {
     const c = req as any as HttpFunctionRequest_ClientInfo;
     const requestInfo = items.some(x => !!x.deviceInfo) ? {
         originalUrl: c.originalUrl,
@@ -91,23 +51,18 @@ export async function runFunction(config: ServerConfigType, context: {
         userAgent: c.headers['user-agent'],
     };
 
-    const groupByUserId = groupToArray(items, x => x.userInfo.userId);
+    const groupByUserId = groupToArray(items, x => x.sessionInfo.userId_claimed);
 
     context.bindings.outLogQueue = groupByUserId.map(g => ({
         items: g,
-        sessionId: items[0].userInfo.sessionId || '',
-        userId: items[0].userInfo.userId || '',
+        sessionToken: items[0].sessionInfo.sessionToken || '',
+        userId_claimed: items[0].sessionInfo.userId_claimed || '',
         ip: clientInfo.ip,
         userAgent: clientInfo.userAgent,
         requestInfo,
     }));
 
     context.log(`Stored in Queue`);
-    // } else {
-    //     context.bindings.outLogOversizeBlob = { items };
-    //     context.bindings.outLogOversizeQueue = config.getLogOversizeBlobName(context.bindingData);
-    //     context.log(`Stored in Oversize Blob`);
-    // }
 
     context.res = {
         body: {
@@ -120,4 +75,4 @@ export async function runFunction(config: ServerConfigType, context: {
 
     context.log('DONE');
     context.done();
-};
+});

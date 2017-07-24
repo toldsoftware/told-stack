@@ -16,4 +16,5 @@ export const clientConfig = new ClientConfig({
             allowRememberMe: true
         },
     },
-}, async () => ({ userToken: 'userToken42' }));
+    getSessionToken: async () => ({ sessionToken: 'userToken42' }),
+});

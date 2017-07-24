@@ -15,7 +15,7 @@ export async function verifyPurchase(testContext: TestContext, testConfig: TestC
     const { email, clientCheckoutId, request } = data;
 
     const response = await apiFetch<CheckoutSubmitResult, CheckoutSubmitRequestBody>(
-        clientConfig.getSubmitTokenUrl(),
+        clientConfig.getServerUrl_submit(),
         request,
     );
 
@@ -23,7 +23,7 @@ export async function verifyPurchase(testContext: TestContext, testConfig: TestC
 
     const statusResponse = await exponentialBackoff(async () => {
         const r = await apiFetch<CheckoutStatusResult>(
-            clientConfig.getCheckoutStatusUrl(email, response.serverCheckoutId)
+            clientConfig.getServerUrl_status(email, response.serverCheckoutId)
         );
 
         if (r.paymentStatus === PaymentStatus.PaymentFailed) {

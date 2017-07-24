@@ -1,5 +1,5 @@
 import { ClientConfig } from "../config/client-config";
-import { UserInfo, AppContextInfo, DeviceInfo, LogItem } from "../config/types";
+import { SessionInfo_Client, AppContextInfo, DeviceInfo, LogItem } from "../config/types";
 
 export class Logger {
 
@@ -13,7 +13,7 @@ export class Logger {
 
     constructor(
         private config: ClientConfig,
-        private getUserInfo: () => UserInfo,
+        private getSessionInfo: () => SessionInfo_Client,
         private getContextInfo: () => AppContextInfo,
         private getDeviceInfo: () => DeviceInfo,
     ) {
@@ -34,7 +34,7 @@ export class Logger {
                 runTime: Date.now() - this._startTime,
                 startTime: this._startTime,
 
-                userInfo: this.getUserInfo(),
+                sessionInfo: this.getSessionInfo(),
                 appContextInfo: this.getContextInfo(),
                 deviceInfo: this.getDeviceInfo(),
             });
@@ -63,7 +63,7 @@ export class Logger {
             runTime: Date.now() - this._startTime,
             startTime: this._startTime,
 
-            userInfo: this.getUserInfo(),
+            sessionInfo: this.getSessionInfo(),
             appContextInfo: this.getContextInfo(),
             deviceInfo: undefined,
         };

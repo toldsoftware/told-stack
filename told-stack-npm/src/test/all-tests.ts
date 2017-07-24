@@ -1,1 +1,1 @@
-import '../payment/stripe/test/000-all-tests.test';
+import '../payment/stripe/test/_all-tests-debug';

@@ -2,28 +2,14 @@ import { LogItem } from "./types";
 import { ClientConfig } from "./client-config";
 import { leftPad } from "../../utils/left-pad";
 import { randHex } from "../../utils/rand";
-import { HttpFunctionRequest_ClientInfo } from "../../types/functions";
+import { HttpFunctionRequest_ClientInfo, QueueBinding, TableBinding } from "../../types/functions";
+import { createTrigger } from "../../azure-functions/function-builder";
 
 export interface FunctionTemplateConfig {
     storageConnection: string;
-
     http_route: string;
-
-    logQueue_queueName: string;
-    // logOversizeQueue_queueName: string;
-    // logOversizeBlob_path: string;
-
-    logTable_tableName_fromQueueTrigger: string;
-    // logTable_partitionKey_fromQueueTrigger: string;
-    // logTable_rowKey_fromQueueTrigger: string;
-
-    sessionLookupTable_tableName_fromQueueTrigger: string;
-    sessionLookupTable_partitionKey_fromQueueTrigger: string;
-    sessionLookupTable_rowKey_fromQueueTrigger: string;
-
-    userLookupTable_tableName_fromQueueTrigger: string;
-    userLookupTable_partitionKey_fromQueueTrigger: string;
-    userLookupTable_rowKey_fromQueueTrigger: string;
+    getBinding_logQueue: () => QueueBinding;
+    getBinding_logTable: () => TableBinding;
 }
 
 export interface HttpFunction_BindingData {
@@ -32,17 +18,22 @@ export interface HttpFunction_BindingData {
     // ['rand-guid']: string;
 }
 
-export interface LogQueueMessage {
+export interface LogQueue {
     items: LogItem[];
 
-    sessionId: string;
-    userId: string;
+    sessionToken: string;
+    userId_claimed: string;
 
     ip: string;
     userAgent: string;
 
     requestInfo?: HttpFunctionRequest_ClientInfo;
 }
+
+export const logQueueTrigger = createTrigger({
+    sessionToken: '',
+    userId_claimed: '',
+});
 
 export interface ServerConfigType {
     // getLogOversizeBlobName(bindingData: HttpFunction_BindingData): string;
@@ -56,29 +47,17 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
     storageConnection = this.default_storageConnectionString_AppSettingName;
 
     http_route = this.clientConfig.sendLog_route;
+    getBinding_logQueue = (): QueueBinding => ({
+        connection: this.storageConnection,
+        queueName: 'log',
+    })
 
-    logQueue_queueName = 'log';
-    // logOversizeQueue_queueName = 'log-oversize';
-    // logOversizeBlob_path = `log-oversize/{DateTime}_{rand-guid}.json`;
-
-    // getLogOversizeBlobName(bindingData: HttpFunction_BindingData) {
-    //     return this.logOversizeBlob_path
-    //         .replace('{DateTime}', bindingData.DateTime)
-    //         .replace('{rand-guid}', bindingData['rand-guid'])
-    //         ;
-    // }
-
-    logTable_tableName_fromQueueTrigger = `log`;
-    // logTable_partitionKey_fromQueueTrigger = `{}`;
-    // logTable_rowKey_fromQueueTrigger = ``;
-
-    sessionLookupTable_tableName_fromQueueTrigger = `sessionuserlookup`;
-    sessionLookupTable_partitionKey_fromQueueTrigger = `lookup-session-user`;
-    sessionLookupTable_rowKey_fromQueueTrigger = `{sessionId}`;
-
-    userLookupTable_tableName_fromQueueTrigger = `sessionuserlookup`;
-    userLookupTable_partitionKey_fromQueueTrigger = `lookup-user-session`;
-    userLookupTable_rowKey_fromQueueTrigger = `{userId}`;
+    getBinding_logTable = (): TableBinding => ({
+        connection: this.storageConnection,
+        tableName: 'log',
+        partitionKey: undefined,
+        rowKey: undefined,
+    });
 
     constructor(
         private clientConfig: ClientConfig,
@@ -88,11 +67,11 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
     }
 
     getPartitionKey(item: LogItem) {
-        return `${item.userInfo.sessionId}`;
+        return `${item.sessionInfo.sessionToken}`;
     }
 
     getRowKey(item: LogItem) {
         // Avoid Collisions in case of bot using replay values (add Random and Date)
-        return `${item.userInfo.userId}_t-${leftPad(item.runTime, 10, '-')}_r-${randHex(8)}_d-${Date.now()}`;
+        return `${item.sessionInfo.userId_claimed}_t-${leftPad(item.runTime, 10, '-')}_r-${randHex(8)}_d-${Date.now()}`;
     }
 }

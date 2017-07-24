@@ -37,7 +37,7 @@ export function createCheckoutSubmitRequest(clientCheckoutId: string, testCode: 
             clientCheckoutId,
             statementDescriptor: `t_${testCode}`,
             statementDescriptor_subscription: `t_${testCode}_sub`,
-            userToken: `userToken1234_${Date.now()}`,
+            sessionToken: `userToken1234_${Date.now()}`,
 
             // Stripe Token
             token: {

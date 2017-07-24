@@ -1,6 +1,6 @@
 import { buildFunction_common, build_binding, build_runFunction_common, build_createFunctionJson } from "../../../core/azure-functions/function-builder";
-import { FunctionTemplateConfig, ServerConfigType, ProcessQueue, StripeCheckoutTable, StripeCheckoutRuntimeConfig, StripeCustomerLookupTable, StripeUserLookupTable, processQueueTrigger, GetUserResultError } from "../config/server-config";
-import { SubscriptionStatus, PaymentStatus, DeliverableStatus, CheckoutStatus, DeliverableStatus_ExecutionResult } from "../../common/checkout-types";
+import { FunctionTemplateConfig, ServerConfigType, ProcessQueue, StripeCheckoutTable, StripeCheckoutRuntimeConfig, StripeCustomerLookupTable, StripeUserLookupTable, processQueueTrigger } from "../config/server-config";
+import { SubscriptionStatus, PaymentStatus, DeliverableStatus, CheckoutStatus, DeliverableStatus_ExecutionResult, CheckoutPausedReason } from "../../common/checkout-types";
 import { saveEntity as _saveEntity } from "../../../core/utils/azure-storage-sdk/tables";
 import { Stripe as _Stripe, StripeCustomer, StripePlan } from "../lib/stripe";
 
@@ -57,9 +57,9 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
         }
     };
 
-    // Restart the process only if the user required login
+    // Restart the process only if the process had been paused
     if (context.bindings.inStripeCheckoutTable) {
-        if (context.bindings.inStripeCheckoutTable.checkoutStatus === CheckoutStatus.Submission_Rejected_LoginAndResubmit) {
+        if (context.bindings.inStripeCheckoutTable.checkoutStatus === CheckoutStatus.Submission_Paused) {
             // Continue
             await saveData({
                 checkoutStatus: CheckoutStatus.Submitted,
@@ -82,6 +82,47 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
     let customer: StripeCustomer = null;
     let userId: string = null;
 
+    // Verify the user owns the stripe email (has authority over that stripe email)
+    try {
+
+        // A user will always have a sessionToken and userId (even anonymous users - this is done immediately upon page load)
+        const userBySessionToken = await config.runtime.lookupUser_sessionToken(q.request.sessionToken);
+        //const ownerOfStripeEmail = await config.runtime.lookupUser_stripeEmail(q.request.token.email);
+        const ownerOfStripeEmail = context.bindings.inStripeUserLookupTable;
+
+        if (!userBySessionToken) {
+            await saveData({
+                checkoutStatus: CheckoutStatus.Submission_Paused,
+                checkoutPausedReason: CheckoutPausedReason.SessionNotFound_CreateNewSession
+            });
+            return context.done({ error: 'Session User Not Found', q });
+
+        } else if (userBySessionToken.isAnonymousUser && ownerOfStripeEmail) {
+            await saveData({
+                checkoutStatus: CheckoutStatus.Submission_Paused,
+                checkoutPausedReason: CheckoutPausedReason.EmailBelongsToAccount_LoginAndResubmit
+            });
+            return context.done({ error: 'User Requires Login', q });
+
+        } else if (userBySessionToken.userId !== ownerOfStripeEmail.userId) {
+            await saveData({
+                checkoutStatus: CheckoutStatus.Submission_Paused,
+                checkoutPausedReason: CheckoutPausedReason.EmailBelongsToOtherUser_LoginToCorrectAccount
+            });
+            return context.done({ error: 'User does not own the email', q });
+        }
+
+        userId = userBySessionToken.userId;
+
+    } catch (err) {
+        await saveData({
+            checkoutStatus: CheckoutStatus.Submission_Paused,
+            checkoutPausedReason: CheckoutPausedReason.UnknownUserError_CreateNewSession,
+            error: err
+        });
+        return context.done({ error: 'User does not own the email', q });
+    }
+
     try {
         // Execute Charge With Stripe
         await saveData({
@@ -90,53 +131,26 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
 
         // Lookup Existing Customer using Email
         const customerLookup = context.bindings.inStripeCustomerLookupTable;
-        const userLookup = context.bindings.inStripeUserLookupTable;
 
-        // if !User && !Customer => New Customer & New User
-        // ??? if User & !Customer => Invalid (Unknown Customer) => New Customer => Attach to User 
-        // ? if !User && Customer => Unclaimed Customer (Previous Payment with No User Account Attached) => New User => Attach to User
-        // ? if User && Customer => Verify User is Correct => Existing Customer
+        if (!customerLookup) {
+            // New Customer
 
-        if (!customerLookup && !userLookup) {
-
-            // Create Customer and User
+            // Create Customer with Stripe
             const newCustomer = await stripe.customers.create({
                 source: q.request.token.id,
                 email: q.request.token.email,
             });
 
             customer = newCustomer;
-            const userResult = await config.runtime.getOrCreateCurrentUserId(q.request.token.email);
-            if (userResult.error) {
-                if (userResult.error === GetUserResultError.EmailBelongsToAnotherUser_RequireLogin) {
-                    await saveData({
-                        checkoutStatus: CheckoutStatus.Submission_Rejected_LoginAndResubmit,
-                        paymentStatus: PaymentStatus.Paused,
-                    });
-                    return context.done({ error: 'User Requires Login', q, userResult });
-                }
-
-                return context.done({ error: 'Unknown User Error', q, userResult });
-            }
-
-            userId = userResult.userId;
 
             // Save
             context.bindings.outStripeCustomerLookupTable = { customerId: customer.id };
             context.bindings.outStripeUserLookupTable = { userId };
 
-        } else if (customerLookup && userLookup) {
-            // Existing User
-            const userResult = await config.runtime.getOrCreateCurrentUserId(q.request.token.email);
+        } else { //else if (customerLookup) {
 
-            if (userResult.userId !== userLookup.userId) {
-                throw 'User Lookup found a Different User than the Logged in User';
-            }
-
-            userId = userResult.userId;
-
+            // Existing Customer
             try {
-
                 customer = await stripe.customers.retrieve(customerLookup.customerId);
 
                 if (!customer) {
@@ -145,22 +159,6 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
             } catch (err) {
                 throw { error: 'Stripe Failed to Find Customer by Customer Id', innerError: err };
             }
-
-        } else {
-            // TODO: FINISH THIS
-            if (!!true) {
-                throw 'Not Implemented';
-            }
-
-            // // Verify ownership
-            // if (userLookup.customerId !== customerLookup.customerId) {
-            //     // If the customer or user is unknown
-            //     // If the customer or user do not match
-            // }
-
-            // // Get Existing Customer
-            // const existingCustomerId = customerLookup.customerId
-            // const existingCustomer = await stripe.customers.retrieve(existingCustomerId);
         }
 
         await saveData({

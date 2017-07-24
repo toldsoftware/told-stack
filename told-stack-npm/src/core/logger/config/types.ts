@@ -1,8 +1,5 @@
-
-export interface UserInfo {
-    sessionId: string;
-    userId: string;
-}
+import { SessionInfo_Client } from "../../account/config/types";
+export { SessionInfo_Client };
 
 export interface AppContextInfo {
     version: string;
@@ -25,7 +22,7 @@ export interface LogItem {
     runTime: number;
     startTime: number;
 
-    userInfo: UserInfo;
+    sessionInfo: SessionInfo_Client;
     appContextInfo: AppContextInfo;
     deviceInfo?: DeviceInfo;
 

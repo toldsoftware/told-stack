@@ -6,24 +6,30 @@ import { hashEmail_partial } from "../../../core/utils/hash";
 
 export type CheckoutEventType = 'Open' | 'ResultChange';
 
-export interface ClientRuntimeOptions {
+export interface ClientRuntimeConfig {
     logCheckoutEvent: (type: CheckoutEventType, data: Object) => void;
 }
 
-export interface ClientConfigOptions {
+export interface ClientConfigOptions extends Partial<ClientConfig> {
     stripePublishableKey: string;
     checkoutOptions: Partial<CheckoutOptions>;
-    getUserToken: () => Promise<{ userToken: string }>;
+    getSessionToken: () => Promise<{ sessionToken: string }>;
+}
 
-    getSubmitTokenUrl(): string;
-    getCheckoutStatusUrl(email: string, serverCheckoutId: string): string;
-    getStripeChargeMetadata(options: CheckoutOptions): { [key: string]: string | number };
-    getStripeChargeStatementDescriptor(options: CheckoutOptions): string;
-    getStripeChargeStatementDescriptor_subscription(options: CheckoutOptions): string;
+export interface ClientConfig {
+    stripePublishableKey: string;
+    checkoutOptions: Partial<CheckoutOptions>;
+    getSessionToken: () => Promise<{ sessionToken: string }>;
+
+    getServerUrl_submit: () => string;
+    getServerUrl_status: (email: string, serverCheckoutId: string) => string;
+    getStripeChargeMetadata: (options: CheckoutOptions) => { [key: string]: string | number };
+    getStripeChargeStatementDescriptor: (options: CheckoutOptions) => string;
+    getStripeChargeStatementDescriptor_subscription: (options: CheckoutOptions) => string;
 }
 
 export interface CheckoutSubmitRequestBody {
-    userToken: string;
+    sessionToken: string;
     clientCheckoutId: string;
     token: StripeToken;
     args: StripeTokenArgs;
@@ -39,9 +45,9 @@ export interface CheckoutSubmitResult extends Partial<CheckoutResult> {
 export interface CheckoutStatusResult extends Partial<CheckoutResult> {
 }
 
-export class ClientConfig implements ClientConfigOptions {
+export class ClientConfig implements ClientConfig {
     stripePublishableKey: string;
-    checkoutOptions: CheckoutOptions;
+    checkoutOptions: Partial<CheckoutOptions>;
 
     domain = '/';
     submit_route = 'api/stripe-checkout-submit';
@@ -49,38 +55,38 @@ export class ClientConfig implements ClientConfigOptions {
     get status_route() { return `${this.status_route_partial}/{emailHash}/{serverCheckoutId}`; }
 
     constructor(
-        private options: Partial<ClientConfigOptions>,
-        public getUserToken: () => Promise<{ userToken: string }>,
-
+        private options: ClientConfigOptions
     ) {
-        assignPartial(this, options);
+        assignPartial(this as ClientConfigOptions, options);
     }
 
-    getSubmitTokenUrl(): string {
+    getSessionToken = this.options.getSessionToken;
+
+    getServerUrl_submit = (): string => {
         return `${this.domain}${this.submit_route}`;
     }
 
-    getCheckoutStatusUrl(email: string, serverCheckoutId: string): string {
+    getServerUrl_status = (email: string, serverCheckoutId: string): string => {
         return `${this.domain}${this.status_route_partial}/${this.getEmailHash(email)}/${serverCheckoutId}`;
     }
 
-    getEmailHash(email: string): string {
+    getEmailHash = (email: string): string => {
         return hashEmail_partial(email);
     }
 
-    getStripeChargeMetadata(options: CheckoutOptions): { [key: string]: string | number } {
+    getStripeChargeMetadata = (options: CheckoutOptions): { [key: string]: string | number } => {
         return {
             ...options.user,
             ...options.product,
         };
     }
 
-    getStripeChargeStatementDescriptor(options: CheckoutOptions): string {
+    getStripeChargeStatementDescriptor = (options: CheckoutOptions): string => {
         return `${options.business.statementDescriptor} ${options.product.statementDescriptor}`.substr(0, 22);
     }
 
 
-    getStripeChargeStatementDescriptor_subscription(options: CheckoutOptions): string {
+    getStripeChargeStatementDescriptor_subscription = (options: CheckoutOptions): string => {
         return `${options.business.statementDescriptor} ${options.product.statementDescriptor_subscription}`.substr(0, 22);
     }
 
