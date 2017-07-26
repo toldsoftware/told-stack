@@ -25,3 +25,9 @@ export function createUserId_server() {
     const rand = randHex(32);
     return `us_${iso}_${rand}`;
 }
+
+export function createVerificationToken() {
+    const now = Date.now();
+    const rand = randHex(64);
+    return `v_${now}_${rand}`;
+}

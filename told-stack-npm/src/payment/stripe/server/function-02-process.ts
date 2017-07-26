@@ -3,9 +3,11 @@ import { FunctionTemplateConfig, ServerConfigType, ProcessQueue, StripeCheckoutT
 import { SubscriptionStatus, PaymentStatus, DeliverableStatus, CheckoutStatus, DeliverableStatus_ExecutionResult, CheckoutPausedReason } from "../../common/checkout-types";
 import { saveEntity as _saveEntity } from "../../../core/utils/azure-storage-sdk/tables";
 import { Stripe as _Stripe, StripeCustomer, StripePlan } from "../lib/stripe";
-import { authenticate, AuthenticateResult } from "../../../core/account/server/authenticate";
-import { createNewUserAndSession } from "../../../core/account/server/accounts";
-import { AccountTable } from "../../../core/account/config/types";
+import { SessionAuthenticator, AuthenticateResult } from "../../../core/account/server/session-authenticator";
+import { AccountManager } from "../../../core/account/server/account-manager";
+import { AccountTable, UserAccess } from "../../../core/account/config/types";
+import { unique_strings } from "../../../core/utils/objects";
+import { EmailProvider } from "../../../core/providers/email-provider";
 
 export const deps = {
     saveEntity: _saveEntity,
@@ -18,7 +20,7 @@ function buildFunction(config: FunctionTemplateConfig) {
             inProcessQueueTrigger: build_binding<ProcessQueue>(config.getBinding_processQueue()),
 
             inSessionTable: build_binding<SessionTable>(config.getBinding_sessionTable(t)),
-            outAccountTable: build_binding<AccountTable[]>(config.getBinding_accountTable()),
+            // outAccountTable: build_binding<AccountTable[]>(config.getBinding_accountTable()),
 
             inStripeCheckoutTable: build_binding<StripeCheckoutTable>(config.getBinding_stripeCheckoutTable_fromTrigger(t)),
 
@@ -33,6 +35,9 @@ function buildFunction(config: FunctionTemplateConfig) {
 export const createFunctionJson = (config: FunctionTemplateConfig) => build_createFunctionJson(config, buildFunction);
 
 export const runFunction = build_runFunction_common(buildFunction, async (config: ServerConfigType, context) => {
+    const authenticator = new SessionAuthenticator(context);
+    const emailProvider = new EmailProvider(config.emailConfig);
+    const accountManager = new AccountManager(config.accountConfig, emailProvider);
 
     context.log('START');
 
@@ -47,6 +52,7 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
             // context.log('saveData START', { paymentStatus: data.paymentStatus, data, b, changedRowKey });
 
             await deps.saveEntity(
+                b.connection,
                 b.tableName,
                 b.partitionKey,
                 changedRowKey,
@@ -54,6 +60,7 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
 
             // Save Main
             await deps.saveEntity(
+                b.connection,
                 b.tableName,
                 b.partitionKey,
                 b.rowKey,
@@ -97,7 +104,7 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
         const userBySessionToken = context.bindings.inSessionTable;
         const ownerOfStripeEmail = context.bindings.inStripeUserLookupTable;
 
-        const auth = authenticate(context.bindings.inSessionTable, q.request.sessionInfo);
+        const auth = authenticator.authenticateSession(q.request.sessionInfo);
 
         switch (auth) {
             // case AuthenticateResult.IncorrectUserIdClaim:
@@ -122,7 +129,12 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
                 }
 
                 // Create User Id
-                const newSessionInfo = createNewUserAndSession(context.bindings.outAccountTable, q.request.sessionInfo, { email: q.request.token.email });
+                const newSessionInfo = accountManager.createNewUserAndSession(q.request.sessionInfo);
+                const emails = unique_strings([q.request.checkoutOptions.user.email, q.request.token.email]);
+                emails.forEach(x => {
+                    accountManager.storeCredential_email_unverified(newSessionInfo.userId, x);
+                });
+
                 userId = newSessionInfo.userId;
 
                 await saveData({

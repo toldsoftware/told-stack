@@ -61,6 +61,12 @@ export function groupToArray<T>(items: T[], getKey: (x: T) => string) {
     return Object.getOwnPropertyNames(g).map(k => g[k].items);
 }
 
+export function unique_strings(items: string[]): string[] {
+    return unique(items.filter(x => !!x), x => x);
+}
+export function unique<T>(items: T[], getKey: (x: T) => string) {
+    return groupToArray(items, getKey).map(x => x[0]);
+}
 
 export function assignPartial<T>(t: T, p: Partial<T>): T {
     for (let k in p) {
@@ -99,3 +105,4 @@ export function partialDeepCompare<T>(a: T, e: Partial<T>, depth = 0) {
 export function deepCompare<T>(actual: T, expected: T) {
     return partialDeepCompare(actual, expected) && partialDeepCompare(expected, actual);
 }
+

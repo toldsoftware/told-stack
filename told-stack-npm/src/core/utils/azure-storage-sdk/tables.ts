@@ -5,11 +5,11 @@ const FORCE_LOWER_CASE = false;
 
 const entGen = TableUtilities.entityGenerator;
 
-export type EntityValueTypes = string | boolean | number | Date;
+export type EntityValueTypes = string | boolean | number | Date | Object;
 export type EntityValues = { [key: string]: EntityValueTypes };
 
-export async function doesEntityExist(tableName: string, partitionKey: string, rowKey: string) {
-    const tableService = createTableService();
+export async function doesEntityExist(connection: string, tableName: string, partitionKey: string, rowKey: string) {
+    const tableService = createTableService(connection);
 
     if (FORCE_LOWER_CASE) {
         partitionKey = partitionKey.toLowerCase();
@@ -24,8 +24,8 @@ export async function doesEntityExist(tableName: string, partitionKey: string, r
     }
 }
 
-export async function saveEntity(tableName: string, partitionKey: string, rowKey: string, values: EntityValues, ...aliases: string[]) {
-    const tableService = createTableService();
+export async function saveEntity(connection: string, tableName: string, partitionKey: string, rowKey: string, values: EntityValues, ...aliases: string[]) {
+    const tableService = createTableService(connection);
 
     if (FORCE_LOWER_CASE) {
         partitionKey = partitionKey.toLowerCase();
@@ -49,8 +49,8 @@ export async function saveEntity(tableName: string, partitionKey: string, rowKey
     return result;
 }
 
-export async function loadEntity_parse<T>(tableName: string, partitionKey: string, rowKeyOrAlias: string, shouldAutoParseJson = true): Promise<T> {
-    const tableService = createTableService();
+export async function loadEntity_parse<T>(connection: string, tableName: string, partitionKey: string, rowKeyOrAlias: string, shouldAutoParseJson = true): Promise<T> {
+    const tableService = createTableService(connection);
 
     if (FORCE_LOWER_CASE) {
         partitionKey = partitionKey.toLowerCase();
@@ -98,20 +98,50 @@ export async function loadEntity_parse<T>(tableName: string, partitionKey: strin
     }
 }
 
-export async function loadEntities(tableName: string, partitionKey: string, count: number) {
-    const tableService = createTableService();
+// export async function loadEntity(connection: string, tableName: string, partitionKey: string, rowKey: string) {
+
+//     if (FORCE_LOWER_CASE) {
+//         partitionKey = partitionKey.toLowerCase();
+//         rowKey = rowKey.toLowerCase();
+//     }
+
+//     const tableService = createTableService(connection);
+
+//     try {
+
+//         // Get Entity
+//         const result = await asyncIt<TableService.QueryEntitiesResult<EntityValues>>(cb => tableService.retrieveEntity(tableName, partitionKey, rowKey, { entityResolver }, cb));
+//         return result.entries[0];
+//     } catch (err) {
+//         console.warn(err);
+
+//         // if (err && err.code === 'ResourceNotFound') {
+//         //     return null;
+//         // }
+
+//         throw err;
+//     }
+// }
+
+export async function loadEntities(connection: string, tableName: string, partitionKey: string, count: number) {
 
     if (FORCE_LOWER_CASE) {
         partitionKey = partitionKey.toLowerCase();
     }
 
+    const query = new TableQuery()
+        .top(count)
+        .where('PartitionKey eq ?', partitionKey);
+
+    return queryEntities(connection, tableName, query);
+}
+
+export async function queryEntities(connection: string, tableName: string, query: TableQuery) {
+    const tableService = createTableService(connection);
+
     try {
 
         // Get Entity
-        const query = new TableQuery()
-            .top(count)
-            .where('PartitionKey eq ?', partitionKey);
-
         const result = await asyncIt<TableService.QueryEntitiesResult<EntityValues>>(cb => tableService.queryEntities(tableName, query, null, { entityResolver }, cb));
         return result.entries;
     } catch (err) {

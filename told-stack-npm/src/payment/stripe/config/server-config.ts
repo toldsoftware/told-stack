@@ -5,6 +5,7 @@ import { QueueBinding, TableBinding } from "../../../core/types/functions";
 import { createTrigger } from "../../../core/azure-functions/function-builder";
 import { AccountServerConfig, SessionTable } from "../../../core/account/config/server-config";
 import { SessionInfo } from "../../../core/account/config/types";
+import { EmailProviderConfig } from "../../../core/providers/email-provider";
 export { SessionTable };
 export { CheckoutSubmitRequestBody };
 
@@ -60,7 +61,7 @@ export interface StripeCheckoutTable extends CheckoutResult {
     plan?: StripePlan,
     subscription?: StripeSubscription,
 
-    newSessionInfo?:SessionInfo;
+    newSessionInfo?: SessionInfo;
 
 
     // timeRequested: number;
@@ -91,6 +92,9 @@ export interface StripeWebhookQueue {
 }
 
 export interface ServerConfigType {
+    emailConfig: EmailProviderConfig;
+    accountConfig: AccountServerConfig;
+
     runtime: StripeCheckoutRuntimeConfig;
 
     getStripeSecretKey(): string;
@@ -100,6 +104,7 @@ export interface ServerConfigType {
     // createServerCheckoutId(): string;
 
     getBinding_stripeCheckoutTable_fromTrigger(trigger: QueueTrigger_NoSession): TableBinding;
+    getBinding_accountTable(): TableBinding;
 }
 
 // export enum GetUserResultError {
@@ -122,7 +127,8 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
     constructor(
         private clientConfig: ClientConfig,
         private runtimeConfig: StripeCheckoutRuntimeConfig,
-        private accountConfig: AccountServerConfig,
+        public accountConfig: AccountServerConfig,
+        public emailConfig: EmailProviderConfig,
         private stripeSecretKey_AppSettingName = 'STRIPE_SECRET_KEY',
         private stripeWebhookSigningSecret_AppSettingName = 'STRIPE_WEBHOOK_SIGNING_SECRET',
     ) {
