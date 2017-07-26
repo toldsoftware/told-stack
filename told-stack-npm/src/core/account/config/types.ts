@@ -9,3 +9,20 @@ export interface SessionInfo {
     userId: string;
     isAnonymous: boolean;
 }
+
+export interface SessionTable extends SessionInfo {
+    PartitionKey: string;
+    RowKey: string;
+    fromSessionToken?: string;
+}
+
+export interface AccountTable extends SessionInfo {
+    PartitionKey: string;
+    RowKey: string;
+    fromSessionToken?: string;
+    userClaim?: UserClaim;
+}
+
+export type UserClaim = {
+    email: string
+};

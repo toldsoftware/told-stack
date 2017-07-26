@@ -1,7 +1,7 @@
 import { createTest } from "../../../core/testing/integration-testing";
 import { TestConfig } from "../config/test-config";
 import { createCheckoutSubmitRequest } from "./common/createRequest";
-import { verifyPurchase } from "./common/verifyPurchase";
+import { verifyPurchase } from "./common/verify-purchase";
 
 export const test_002_existing_user = createTest<TestConfig>((testConfig: TestConfig) => ({
     name: `An Existing User Should Purchase a Product (${testConfig.options.shouldUseNewProduct ? 'New Product' : ''})`,

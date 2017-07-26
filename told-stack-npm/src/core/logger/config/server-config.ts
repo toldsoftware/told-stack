@@ -4,6 +4,7 @@ import { leftPad } from "../../utils/left-pad";
 import { randHex } from "../../utils/rand";
 import { HttpFunctionRequest_ClientInfo, QueueBinding, TableBinding } from "../../types/functions";
 import { createTrigger } from "../../azure-functions/function-builder";
+import { HttpProvider_Server } from "../../providers/http-provider";
 
 export interface FunctionTemplateConfig {
     storageConnection: string;
@@ -40,6 +41,8 @@ export interface ServerConfigType {
 
     getPartitionKey(item: LogItem): string;
     getRowKey(item: LogItem): string;
+
+    httpProvider: HttpProvider_Server;
 }
 
 export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
@@ -74,4 +77,6 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
         // Avoid Collisions in case of bot using replay values (add Random and Date)
         return `${item.sessionInfo.userId_claimed}_t-${leftPad(item.runTime, 10, '-')}_r-${randHex(8)}_d-${Date.now()}`;
     }
+
+    httpProvider = this.clientConfig.httpProvider as any as HttpProvider_Server;
 }

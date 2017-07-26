@@ -1,11 +1,11 @@
 import { buildFunction_http, build_binding, build_runFunction_http, build_createFunctionJson } from "../../azure-functions/function-builder";
 import { FunctionTemplateConfig, ServerConfigType, HttpFunction_BindingData, LogQueue } from "../config/server-config";
-import { LogItem } from "../config/types";
+import { LogItem, LogRequestBody, LogResponseBody } from "../config/types";
 import { group, groupToArray } from "../../utils/objects";
 import { HttpFunctionRequest_ClientInfo } from "../../types/functions";
 
 function buildFunction(config: FunctionTemplateConfig) {
-    return buildFunction_http({
+    return buildFunction_http<LogResponseBody>({
         route: config.http_route
     })
         .bindings(t => ({
@@ -19,11 +19,32 @@ export const runFunction = build_runFunction_http(buildFunction, (config: Server
     context.log('START');
 
     // Only Supports Max Queue Size (64kb)
-    const items = JSON.parse(req.body) as LogItem[];
+    const d = config.httpProvider.parseRequest<LogRequestBody>(req.body);
+    if (!d.data) {
+        // Ignore Verification failure (Just for logging for now)
+        d.data = d.data_ignoreVerificationError;
+
+        // context.res = {
+        //     body: {
+        //         ok: false,
+        //         error: 'Failed to Parse Request'
+        //     },
+        //     headers: {
+        //         'Content-Type': 'application/json',
+        //     }
+        // };
+
+        // context.log('DONE');
+        // context.done();
+        // return;
+    }
+
+    const items = d.data.items;
 
     if (!items) {
         context.res = {
             body: {
+                ok: false,
                 error: 'No Items Sent'
             },
             headers: {

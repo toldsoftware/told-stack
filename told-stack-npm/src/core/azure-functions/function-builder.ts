@@ -130,7 +130,7 @@ export class FunctionBuilder<TBindings={}, TBindingData={}, TContextExt={}, TBui
 
 export type BindingDefinition<T> = T; // & { _def: any };
 
-export function buildFunction_http<TBindingData, TRequestQuery = {}, TRequestBody = string, TResponseBody = {}>(options: { route: string, bindingData?: TBindingData })
+export function buildFunction_http<TResponseBody = {}, TBindingData={}, TRequestQuery = {}, TRequestBody = string>(options: { route: string, bindingData?: TBindingData })
     : FunctionBuilder<{}, TBindingData, { res: HttpFunctionResponse<TResponseBody> }, { req: HttpFunctionRequest<TRequestBody> }> {
 
     // {

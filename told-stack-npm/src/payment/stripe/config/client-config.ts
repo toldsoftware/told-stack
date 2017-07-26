@@ -3,6 +3,7 @@ import { ClientConfig as LoggerClientConfig } from "../../../core/logger/config/
 import { assignPartial } from "../../../core/utils/objects";
 import { StripeToken, StripeTokenArgs } from "../client/stripe-checkout-access";
 import { hashEmail_partial } from "../../../core/utils/hash";
+import { SessionInfo_Client } from "../../../core/account/config/types";
 
 export type CheckoutEventType = 'Open' | 'ResultChange';
 
@@ -13,13 +14,13 @@ export interface ClientRuntimeConfig {
 export interface ClientConfigOptions extends Partial<ClientConfig> {
     stripePublishableKey: string;
     checkoutOptions: Partial<CheckoutOptions>;
-    getSessionToken: () => Promise<{ sessionToken: string }>;
+    getSessionInfo: () => Promise<SessionInfo_Client>;
 }
 
 export interface ClientConfig {
     stripePublishableKey: string;
     checkoutOptions: Partial<CheckoutOptions>;
-    getSessionToken: () => Promise<{ sessionToken: string }>;
+    getSessionInfo: () => Promise<SessionInfo_Client>;
 
     getServerUrl_submit: () => string;
     getServerUrl_status: (email: string, serverCheckoutId: string) => string;
@@ -29,7 +30,7 @@ export interface ClientConfig {
 }
 
 export interface CheckoutSubmitRequestBody {
-    sessionToken: string;
+    sessionInfo: SessionInfo_Client;
     clientCheckoutId: string;
     token: StripeToken;
     args: StripeTokenArgs;
@@ -60,7 +61,7 @@ export class ClientConfig implements ClientConfig {
         assignPartial(this as ClientConfigOptions, options);
     }
 
-    getSessionToken = this.options.getSessionToken;
+    getSessionInfo = this.options.getSessionInfo;
 
     getServerUrl_submit = (): string => {
         return `${this.domain}${this.submit_route}`;

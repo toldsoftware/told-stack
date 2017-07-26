@@ -74,11 +74,14 @@ export enum CheckoutStatus {
 export enum CheckoutPausedReason {
     None = '',
 
+    // // User Id could not be found by provided Session Id: Make sure to request Session before submission
+    // SessionNotFound_CreateNewSession = 'SessionNotFound_CreateNewSession',
+
+    // User Id did not match Session Id: Reset Session
+    SessionNotAuthenticated_CreateNewSession = 'SessionNotAuthenticated_CreateNewSession',
+
     // The Submission Requires User Login with the Stripe Email
     EmailBelongsToAccount_LoginAndResubmit = 'EmailBelongsToAccount_LoginAndResubmit',
-
-    // User Id could not be found by provided Session Id: Make sure to request Session before submission
-    SessionNotFound_CreateNewSession = 'SessionNotFound_CreateNewSession',
 
     // Email was Found, but Belongs to a Different User -> Login to Correct Account
     EmailBelongsToOtherUser_LoginToCorrectAccount = 'EmailBelongsToOtherUser_LoginToCorrectAccount',

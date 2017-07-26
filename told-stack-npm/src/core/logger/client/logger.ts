@@ -1,5 +1,5 @@
 import { ClientConfig } from "../config/client-config";
-import { SessionInfo_Client, AppContextInfo, DeviceInfo, LogItem } from "../config/types";
+import { SessionInfo_Client, AppContextInfo, DeviceInfo, LogItem, LogRequestBody, LogResponseBody } from "../config/types";
 
 export class Logger {
 
@@ -104,12 +104,12 @@ export class Logger {
         });
 
         let sentItems = items;
-        let body = JSON.stringify(items);
+        let data = { items } as LogRequestBody;
 
         // If body is too large, break it up
         let hasSentAll = true;
         let count = items.length;
-        while (body.length > this.config.maxSendSize) {
+        while (JSON.stringify(data).length > this.config.maxSendSize) {
             if (count === 1) {
                 // Truncate Message Data
                 sentItems.forEach(x => x.data = 'truncated:' + JSON.stringify(x.data).substr(0, this.config.maxDataSize) + '...');
@@ -119,14 +119,14 @@ export class Logger {
             hasSentAll = false;
             count = Math.floor(count / 2);
             sentItems = items.slice(0, count);
-            body = JSON.stringify(sentItems);
+            data = { items: sentItems } as LogRequestBody;
         }
 
         if (!hasSentAll) {
             this._items.push(...items.slice(count));
         }
 
-        const r = await fetch(this.config.getSendLogUrl(), { method: 'POST', body });
+        const r = await this.config.httpProvider.request<LogResponseBody, LogRequestBody>(this.config.getSendLogUrl(), { method: 'POST', body: data });
 
         // If send failure, add items back to end of queue to try again
         if (!r.ok) {

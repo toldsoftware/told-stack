@@ -1,6 +1,8 @@
 import { CheckoutSubmitRequestBody } from "../../config/client-config";
 import { CheckoutOptions } from "../../../common/checkout-types";
 
+// TODO: Use debug-config
+
 export function createCheckoutOptions(testCode: string, userEmail: string, shouldUseNewProduct: boolean): CheckoutOptions {
     const prodSuffix = shouldUseNewProduct ? `_${Date.now()}` : '';
 
@@ -37,7 +39,11 @@ export function createCheckoutSubmitRequest(clientCheckoutId: string, testCode: 
             clientCheckoutId,
             statementDescriptor: `t_${testCode}`,
             statementDescriptor_subscription: `t_${testCode}_sub`,
-            sessionToken: `userToken1234_${Date.now()}`,
+            sessionInfo: {
+                sessionToken: `userToken1234_${Date.now()}`,
+                userId_claimed: `userToken1234_${Date.now()}`,
+                isAnonymous: true
+            },
 
             // Stripe Token
             token: {

@@ -26,7 +26,7 @@ export class StripeCheckoutProcess implements CheckoutProcess {
 
         console.log('StripeCheckoutProcess Setup Result Observer');
         const clientCheckoutId = uuid.v4();
-        const { sessionToken } = await this.config.getSessionToken();
+        const sessionInfo = await this.config.getSessionInfo();
 
         let observer: Observer<CheckoutResult_Client>;
         let lastResult: CheckoutResult_Client = {
@@ -73,7 +73,7 @@ export class StripeCheckoutProcess implements CheckoutProcess {
 
             const url = this.config.getServerUrl_submit();
             const data: CheckoutSubmitRequestBody = {
-                sessionToken,
+                sessionInfo,
                 clientCheckoutId,
                 token,
                 args,

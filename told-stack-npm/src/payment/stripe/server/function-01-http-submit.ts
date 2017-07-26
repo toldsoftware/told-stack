@@ -52,9 +52,10 @@ export const runFunction = build_runFunction_http(buildFunction, (config: Server
     const checkoutStatus = CheckoutStatus.Submitted;
 
     context.bindings.outProcessQueue = {
-        request,
         emailHash,
         serverCheckoutId,
+        sessionToken: request.sessionInfo.sessionToken,
+        request,
     };
 
     // context.bindings.outStripeCheckoutTable = {

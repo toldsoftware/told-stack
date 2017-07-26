@@ -1,8 +1,11 @@
 import { buildFunction_common, build_binding, build_runFunction_common, build_createFunctionJson } from "../../../core/azure-functions/function-builder";
-import { FunctionTemplateConfig, ServerConfigType, ProcessQueue, StripeCheckoutTable, StripeCheckoutRuntimeConfig, StripeCustomerLookupTable, StripeUserLookupTable, processQueueTrigger } from "../config/server-config";
+import { FunctionTemplateConfig, ServerConfigType, ProcessQueue, StripeCheckoutTable, StripeCheckoutRuntimeConfig, StripeCustomerLookupTable, StripeUserLookupTable, processQueueTrigger, SessionTable } from "../config/server-config";
 import { SubscriptionStatus, PaymentStatus, DeliverableStatus, CheckoutStatus, DeliverableStatus_ExecutionResult, CheckoutPausedReason } from "../../common/checkout-types";
 import { saveEntity as _saveEntity } from "../../../core/utils/azure-storage-sdk/tables";
 import { Stripe as _Stripe, StripeCustomer, StripePlan } from "../lib/stripe";
+import { authenticate, AuthenticateResult } from "../../../core/account/server/authenticate";
+import { createNewUserAndSession } from "../../../core/account/server/accounts";
+import { AccountTable } from "../../../core/account/config/types";
 
 export const deps = {
     saveEntity: _saveEntity,
@@ -13,10 +16,16 @@ function buildFunction(config: FunctionTemplateConfig) {
     return buildFunction_common(processQueueTrigger)
         .bindings(t => ({
             inProcessQueueTrigger: build_binding<ProcessQueue>(config.getBinding_processQueue()),
+
+            inSessionTable: build_binding<SessionTable>(config.getBinding_sessionTable(t)),
+            outAccountTable: build_binding<AccountTable[]>(config.getBinding_accountTable()),
+
             inStripeCheckoutTable: build_binding<StripeCheckoutTable>(config.getBinding_stripeCheckoutTable_fromTrigger(t)),
+
             inStripeCustomerLookupTable: build_binding<StripeCustomerLookupTable>(config.getBinding_stripeCustomerLookupTable_fromTrigger(t)),
-            inStripeUserLookupTable: build_binding<StripeUserLookupTable>(config.getBinding_stripeUserLookupTable_fromTrigger(t)),
             outStripeCustomerLookupTable: build_binding<StripeCustomerLookupTable>(config.getBinding_stripeCustomerLookupTable_fromTrigger(t)),
+
+            inStripeUserLookupTable: build_binding<StripeUserLookupTable>(config.getBinding_stripeUserLookupTable_fromTrigger(t)),
             outStripeUserLookupTable: build_binding<StripeUserLookupTable>(config.getBinding_stripeUserLookupTable_fromTrigger(t)),
         }));
 }
@@ -85,34 +94,58 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
     // Verify the user owns the stripe email (has authority over that stripe email)
     try {
 
-        // A user will always have a sessionToken and userId (even anonymous users - this is done immediately upon page load)
-        const userBySessionToken = await config.runtime.lookupUser_sessionToken(q.request.sessionToken);
-        //const ownerOfStripeEmail = await config.runtime.lookupUser_stripeEmail(q.request.token.email);
+        const userBySessionToken = context.bindings.inSessionTable;
         const ownerOfStripeEmail = context.bindings.inStripeUserLookupTable;
 
-        if (!userBySessionToken) {
-            await saveData({
-                checkoutStatus: CheckoutStatus.Submission_Paused,
-                checkoutPausedReason: CheckoutPausedReason.SessionNotFound_CreateNewSession
-            });
-            return context.done({ error: 'Session User Not Found', q });
+        const auth = authenticate(context.bindings.inSessionTable, q.request.sessionInfo);
 
-        } else if (userBySessionToken.isAnonymousUser && ownerOfStripeEmail) {
-            await saveData({
-                checkoutStatus: CheckoutStatus.Submission_Paused,
-                checkoutPausedReason: CheckoutPausedReason.EmailBelongsToAccount_LoginAndResubmit
-            });
-            return context.done({ error: 'User Requires Login', q });
+        switch (auth) {
+            // case AuthenticateResult.IncorrectUserIdClaim:
+            //     await saveData({
+            //         checkoutStatus: CheckoutStatus.Submission_Paused,
+            //         checkoutPausedReason: CheckoutPausedReason.SessionNotAuthenticated_CreateNewSession
+            //     });
+            //     return context.done({ error: 'Incorrect User Id Claim', q });
 
-        } else if (userBySessionToken.userId !== ownerOfStripeEmail.userId) {
-            await saveData({
-                checkoutStatus: CheckoutStatus.Submission_Paused,
-                checkoutPausedReason: CheckoutPausedReason.EmailBelongsToOtherUser_LoginToCorrectAccount
-            });
-            return context.done({ error: 'User does not own the email', q });
+            case AuthenticateResult.UnknownSession:
+            case AuthenticateResult.AnonymousUser:
+                // case AuthenticateResult.MissingUserIdClaim:
+
+                // Anonymous (New User - unless known stripe email)
+
+                if (ownerOfStripeEmail) {
+                    await saveData({
+                        checkoutStatus: CheckoutStatus.Submission_Paused,
+                        checkoutPausedReason: CheckoutPausedReason.EmailBelongsToAccount_LoginAndResubmit
+                    });
+                    return context.done({ error: 'User Requires Login for Known Stripe Email', q });
+                }
+
+                // Create User Id
+                const newSessionInfo = createNewUserAndSession(context.bindings.outAccountTable, q.request.sessionInfo, { email: q.request.token.email });
+                userId = newSessionInfo.userId;
+
+                await saveData({
+                    newSessionInfo
+                });
+
+                break;
+
+            case AuthenticateResult.Authenticated:
+                // Authenticated (Existing User)
+
+                if (userBySessionToken.userId !== ownerOfStripeEmail.userId) {
+                    await saveData({
+                        checkoutStatus: CheckoutStatus.Submission_Paused,
+                        checkoutPausedReason: CheckoutPausedReason.EmailBelongsToOtherUser_LoginToCorrectAccount
+                    });
+                    return context.done({ error: 'User does not own the Stripe Email', q });
+                }
+
+                userId = userBySessionToken.userId;
+                break;
         }
 
-        userId = userBySessionToken.userId;
 
     } catch (err) {
         await saveData({
@@ -120,7 +153,7 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
             checkoutPausedReason: CheckoutPausedReason.UnknownUserError_CreateNewSession,
             error: err
         });
-        return context.done({ error: 'User does not own the email', q });
+        return context.done({ error: 'Unknown User Error', err, q });
     }
 
     try {

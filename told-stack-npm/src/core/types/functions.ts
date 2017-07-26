@@ -33,6 +33,10 @@ export interface HttpFunctionRequest_ClientInfo {
     };
 }
 
+export interface HttpBinding {
+    route: string;
+}
+
 export interface QueueBinding {
     queueName: string;
     connection: string;

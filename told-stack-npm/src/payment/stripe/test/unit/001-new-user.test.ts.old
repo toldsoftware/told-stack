@@ -146,6 +146,7 @@ describe('A New User', async () => {
                     inStripeCustomerLookupTable: { getter: () => null },
                     outStripeUserLookupTable: { setter: v => outStripeUserLookupTable = v },
                     outStripeCustomerLookupTable: { setter: v => outStripeCustomerLookupTable = v },
+                    
                 }
             });
 

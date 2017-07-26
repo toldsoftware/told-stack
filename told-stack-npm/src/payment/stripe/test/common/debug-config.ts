@@ -3,6 +3,10 @@ import { TestContext } from "../../../../core/testing/integration-testing";
 import { TestConfig } from "../../config/test-config";
 import { ClientConfig } from "../../config/client-config";
 import { ServerConfig } from "../../config/server-config";
+import { AccountServerConfig } from "../../../../core/account/config/server-config";
+
+// TODO: Modify CreateRequest to use this
+// TODO: Use this for samples/demo config for deploy
 
 export const clientConfig = new ClientConfig({
     stripePublishableKey: 'pk_stripe_publishable_key_1234',
@@ -21,20 +25,19 @@ export const clientConfig = new ClientConfig({
         },
     },
     // Needs to work with Server
-    getSessionToken: async () => ({ sessionToken: 'userToken42' }),
+    getSessionInfo: async () => ({
+        sessionToken: 'userToken42',
+        userId_claimed: '',
+        isAnonymous: true,
+    }),
 });
 
 // Used by the Demo Config for server testing
+export const accountConfig = new AccountServerConfig();
+
 export const serverConfig = new ServerConfig(clientConfig, {
     executeRequest: async () => { },
-    lookupUser_sessionToken: async (sessionToken) => ({
-        userId: '42',
-        isAnonymousUser: false,
-    }),
-    lookupUser_stripeEmail: async (userToken) => ({
-        userId: '42'
-    }),
-});
+}, accountConfig);
 
 export const userDebugCodes = {
     newUser: 'new_user',

@@ -27,3 +27,13 @@ export interface LogItem {
     deviceInfo?: DeviceInfo;
 
 }
+
+export interface LogRequestBody {
+    items: LogItem[];
+    pow: string;
+}
+
+export type LogResponseBody = {
+    ok?: boolean;
+    error?: string;
+}

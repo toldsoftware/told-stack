@@ -3,6 +3,9 @@ import { CheckoutStatus, SubscriptionStatus, CheckoutResult } from "../../common
 import { Stripe, StripeCharge, StripeCustomer, StripePlan, StripeSubscription, StripeEvent } from "../lib/stripe";
 import { QueueBinding, TableBinding } from "../../../core/types/functions";
 import { createTrigger } from "../../../core/azure-functions/function-builder";
+import { AccountServerConfig, SessionTable } from "../../../core/account/config/server-config";
+import { SessionInfo } from "../../../core/account/config/types";
+export { SessionTable };
 export { CheckoutSubmitRequestBody };
 
 export interface FunctionTemplateConfig {
@@ -11,24 +14,35 @@ export interface FunctionTemplateConfig {
     webhook_route: string;
 
     getBinding_processQueue(): QueueBinding;
-    getBinding_stripeCheckoutTable_fromTrigger(trigger: typeof processQueueTrigger): TableBinding;
-    getBinding_stripeCustomerLookupTable_fromTrigger(trigger: typeof processQueueTrigger): TableBinding;
-    getBinding_stripeUserLookupTable_fromTrigger(trigger: typeof processQueueTrigger): TableBinding;
+    getBinding_stripeCheckoutTable_fromTrigger(trigger: QueueTrigger_NoSession): TableBinding;
+    getBinding_stripeCustomerLookupTable_fromTrigger(trigger: QueueTrigger_NoSession): TableBinding;
+    getBinding_stripeUserLookupTable_fromTrigger(trigger: QueueTrigger_NoSession): TableBinding;
 
     getBinding_stripeWebhookQueue(): QueueBinding
+
+    getBinding_sessionTable(trigger: { sessionToken: string }): TableBinding;
+    getBinding_accountTable(): TableBinding;
 }
 
 export const processQueueTrigger = createTrigger({
     emailHash: '',
     serverCheckoutId: '',
+    sessionToken: '',
 });
+
+export interface QueueTrigger_NoSession {
+    emailHash: string;
+    serverCheckoutId: string;
+}
 
 export const statusHttpTrigger = processQueueTrigger;
 
 export interface ProcessQueue {
-    request: CheckoutSubmitRequestBody;
     emailHash: string;
     serverCheckoutId: string;
+    sessionToken: string;
+
+    request: CheckoutSubmitRequestBody;
 }
 
 export interface StripeCheckoutTable extends CheckoutResult {
@@ -45,6 +59,8 @@ export interface StripeCheckoutTable extends CheckoutResult {
     charge?: StripeCharge,
     plan?: StripePlan,
     subscription?: StripeSubscription,
+
+    newSessionInfo?:SessionInfo;
 
 
     // timeRequested: number;
@@ -83,7 +99,7 @@ export interface ServerConfigType {
     getEmailHash(email: string): string;
     // createServerCheckoutId(): string;
 
-    getBinding_stripeCheckoutTable_fromTrigger(trigger: typeof processQueueTrigger): TableBinding;
+    getBinding_stripeCheckoutTable_fromTrigger(trigger: QueueTrigger_NoSession): TableBinding;
 }
 
 // export enum GetUserResultError {
@@ -93,8 +109,8 @@ export interface ServerConfigType {
 
 export interface StripeCheckoutRuntimeConfig {
     executeRequest: (request: CheckoutSubmitRequestBody) => Promise<void>;
-    lookupUser_sessionToken(userToken: string): Promise<{ userId: string, isAnonymousUser: boolean }>;
-    lookupUser_stripeEmail(stripeEmail: string): Promise<{ userId: string }>;
+    // lookupUser_sessionToken(userToken: string): Promise<{ userId: string, isAnonymousUser: boolean }>;
+    // lookupUser_stripeEmail(stripeEmail: string): Promise<{ userId: string }>;
 }
 
 export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
@@ -106,6 +122,7 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
     constructor(
         private clientConfig: ClientConfig,
         private runtimeConfig: StripeCheckoutRuntimeConfig,
+        private accountConfig: AccountServerConfig,
         private stripeSecretKey_AppSettingName = 'STRIPE_SECRET_KEY',
         private stripeWebhookSigningSecret_AppSettingName = 'STRIPE_WEBHOOK_SIGNING_SECRET',
     ) {
@@ -132,7 +149,7 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
         };
     }
 
-    getBinding_stripeCheckoutTable_fromTrigger(trigger: typeof processQueueTrigger): TableBinding {
+    getBinding_stripeCheckoutTable_fromTrigger(trigger: QueueTrigger_NoSession): TableBinding {
         return {
             tableName: 'stripe',
             partitionKey: trigger.emailHash && `${trigger.emailHash}` || undefined,
@@ -141,7 +158,7 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
         };
     }
 
-    getBinding_stripeCustomerLookupTable_fromTrigger(trigger: typeof processQueueTrigger): TableBinding {
+    getBinding_stripeCustomerLookupTable_fromTrigger(trigger: QueueTrigger_NoSession): TableBinding {
         return {
             tableName: 'stripe',
             partitionKey: `${trigger.emailHash}`,
@@ -151,7 +168,7 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
     }
 
 
-    getBinding_stripeUserLookupTable_fromTrigger(trigger: typeof processQueueTrigger): TableBinding {
+    getBinding_stripeUserLookupTable_fromTrigger(trigger: QueueTrigger_NoSession): TableBinding {
         return {
             tableName: 'stripe',
             partitionKey: `${trigger.emailHash}`,
@@ -159,6 +176,9 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
             connection: this.storageConnection
         };
     }
+
+    getBinding_sessionTable = this.accountConfig.getBinding_SessionTable;
+    getBinding_accountTable = this.accountConfig.getBinding_AccountTable;
 
 
     getEmailHash = this.clientConfig.getEmailHash;
