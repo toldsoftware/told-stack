@@ -24,7 +24,7 @@ export async function doesEntityExist(connection: string, tableName: string, par
     }
 }
 
-export async function saveEntity(connection: string, tableName: string, partitionKey: string, rowKey: string, values: EntityValues, ...aliases: string[]) {
+export async function saveEntity_merge(connection: string, tableName: string, partitionKey: string, rowKey: string, values: EntityValues, ...aliases: string[]) {
     const tableService = createTableService(connection);
 
     if (FORCE_LOWER_CASE) {

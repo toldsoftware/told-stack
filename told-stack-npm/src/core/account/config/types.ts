@@ -3,13 +3,14 @@ export interface SessionInfo_Client {
     isAnonymous: boolean;
 
     userId_claimed: string;
-    userPermissions_claimed: UserPermission[];
+    accountPermissions_claimed: AccountPermission[];
 }
 
 export interface SessionInfo {
     sessionToken: string;
     userId: string;
-    userPermissions: UserPermission[];
+    accountPermissions: AccountPermission[];
+    userAuthorizations: string[];
 
     oldSessionToken?: string;
 }
@@ -26,45 +27,46 @@ export interface AccountTable {
     RowKey: string;
 
     userId: string;
+    usageCount: number;
 
     userAlias?: UserAlias;
-    userCredential?: UserEvidence;
+    userEvidence?: UserEvidence;
 
     isDisabled?: boolean;
 }
 
-export function verifyUserPermission(actualPermissions: UserPermission[], requiredPermission: UserPermission) {
-    return actualPermissions.indexOf(UserPermission.Full) >= 0
+export function verifyUserPermission(actualPermissions: AccountPermission[], requiredPermission: AccountPermission) {
+    return actualPermissions.indexOf(AccountPermission.Full) >= 0
         || actualPermissions.indexOf(requiredPermission) >= 0;
 }
 
-export enum UserPermission {
+export enum AccountPermission {
     None = '',
     SendEmail_ResetPassword = 'SendEmail_ResetPassword',
-    ChangePassword = 'ChangePassword',
+    SetCredentials = 'SetCredentials',
     Full = 'Full',
 }
 
-export function getUserPermissions_userAliasKind(kind: UserAliasKind): UserPermission[] {
+export function getAccountPermissions_userAliasKind(kind: UserAliasKind): AccountPermission[] {
     switch (kind) {
         case UserAliasKind.facebookId:
-            return [UserPermission.Full];
+            return [AccountPermission.Full];
 
         case UserAliasKind.email:
-            return [UserPermission.SendEmail_ResetPassword];
+            return [AccountPermission.SendEmail_ResetPassword];
 
         default:
             return [];
     }
 }
 
-export function getUserPermissions_userCredentialKind(kind: UserEvidenceKind): UserPermission[] {
+export function getAccountPermissions_userEvidenceKind(kind: UserEvidenceKind): AccountPermission[] {
     switch (kind) {
         case UserEvidenceKind.password:
-            return [UserPermission.Full];
+            return [AccountPermission.Full];
 
         case UserEvidenceKind.token_resetPassword:
-            return [UserPermission.ChangePassword];
+            return [AccountPermission.SetCredentials];
 
         default:
             return [];
@@ -95,4 +97,5 @@ export type UserEvidence =
         kind: UserEvidenceKind.token_resetPassword;
         resetPasswordToken: string;
         expireTime: number;
+        maxUsages: 1;
     };

@@ -116,7 +116,7 @@ export interface ServerConfigType {
 // }
 
 export interface StripeCheckoutRuntimeConfig {
-    executeRequest: (request: CheckoutSubmitRequestBody) => Promise<void>;
+    executeRequest: (request: CheckoutSubmitRequestBody, lastSessionToken: string) => Promise<{ newSessionInfo?: SessionInfo }>;
     // lookupUser_sessionToken(userToken: string): Promise<{ userId: string, isAnonymousUser: boolean }>;
     // lookupUser_stripeEmail(stripeEmail: string): Promise<{ userId: string }>;
 }

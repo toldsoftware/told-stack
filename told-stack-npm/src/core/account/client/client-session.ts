@@ -1,4 +1,4 @@
-import { SessionInfo_Client, UserPermission, SessionInfo } from "../config/types";
+import { SessionInfo_Client, AccountPermission, SessionInfo } from "../config/types";
 import { createSessonToken_client, createUserId_anonymous_client } from "../config/account-ids";
 
 export class ClientSession implements SessionInfo_Client {
@@ -6,7 +6,7 @@ export class ClientSession implements SessionInfo_Client {
     public isAnonymous = true;
 
     public userId_claimed: string = null;
-    public userPermissions_claimed: UserPermission[] = [];
+    public accountPermissions_claimed: AccountPermission[] = [];
 
     constructor() {
         this.userId_claimed = createUserId_anonymous_client();
@@ -16,7 +16,7 @@ export class ClientSession implements SessionInfo_Client {
         this.isAnonymous = false;
         this.sessionToken = sessionInfo.sessionToken;
         this.userId_claimed = sessionInfo.userId;
-        this.userPermissions_claimed = sessionInfo.userPermissions;
+        this.accountPermissions_claimed = sessionInfo.accountPermissions;
     }
 }
 

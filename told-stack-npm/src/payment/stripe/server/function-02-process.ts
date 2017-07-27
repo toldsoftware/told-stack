@@ -1,12 +1,12 @@
 import { buildFunction_common, build_binding, build_runFunction_common, build_createFunctionJson } from "../../../core/azure-functions/function-builder";
 import { FunctionTemplateConfig, ServerConfigType, ProcessQueue, StripeCheckoutTable, StripeCheckoutRuntimeConfig, StripeCustomerLookupTable, StripeUserLookupTable, processQueueTrigger, SessionTable } from "../config/server-config";
 import { SubscriptionStatus, PaymentStatus, DeliverableStatus, CheckoutStatus, DeliverableStatus_ExecutionResult, CheckoutPausedReason } from "../../common/checkout-types";
-import { saveEntity as _saveEntity } from "../../../core/utils/azure-storage-sdk/tables";
+import { saveEntity_merge as _saveEntity } from "../../../core/utils/azure-storage-sdk/tables";
 import { Stripe as _Stripe, StripeCustomer, StripePlan } from "../lib/stripe";
 import { SessionAuthenticator } from "../../../core/account/server/session-authenticator";
 import { AccountManager } from "../../../core/account/server/account-manager";
-import { AccountTable, UserPermission } from "../../../core/account/config/types";
-import { unique_strings } from "../../../core/utils/objects";
+import { AccountTable, AccountPermission } from "../../../core/account/config/types";
+import { unique_values } from "../../../core/utils/objects";
 import { EmailProvider } from "../../../core/providers/email-provider";
 import { SessionManager } from "../../../core/account/server/session-manager";
 
@@ -39,19 +39,23 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
     const authenticator = new SessionAuthenticator(context);
     const emailProvider = new EmailProvider(config.emailConfig);
     const accountManager = new AccountManager(config.accountConfig, emailProvider);
-    const sessionManager = new SessionManager(config.accountConfig);
 
     // TODO: Refactor this into methods
 
     context.log('START');
 
     const q = context.bindings.inProcessQueueTrigger;
+    let lastSessionToken = q.sessionToken;
 
     const saveData = async (data: Partial<StripeCheckoutTable>) => {
         try {
             // Log History
             const b = config.getBinding_stripeCheckoutTable_fromTrigger(q);
             const changedRowKey = `${b.rowKey}_LOG-${Date.now()}`;
+
+            if (data.newSessionInfo) {
+                lastSessionToken = data.newSessionInfo.sessionToken;
+            }
 
             // context.log('saveData START', { paymentStatus: data.paymentStatus, data, b, changedRowKey });
 
@@ -110,7 +114,7 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
 
         const doesUserExist = accountManager.doesUserExist(sessionInfo && sessionInfo.userId);
 
-        const emails = unique_strings([q.request.checkoutOptions.user.email, q.request.token.email]);
+        const emails = unique_values([q.request.checkoutOptions.user.email, q.request.token.email]);
         const canClaimEmails = (await Promise.all(
             emails.map((x) => accountManager.canUserClaimEmail(sessionInfo && sessionInfo.userId, x))
         )).every(x => x);
@@ -127,8 +131,7 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
             }
 
             // Create User Id
-            const newUser = await accountManager.createNewUser();
-            const newSessionInfo = await sessionManager.createNewSession(userId, [UserPermission.ChangePassword], q.request.sessionInfo.sessionToken);
+            const newSessionInfo = await accountManager.createNewUser(lastSessionToken);
             userId = newSessionInfo.userId;
 
             await saveData({
@@ -307,7 +310,7 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
             deliverableStatus: DeliverableStatus.Enabled,
         });
 
-        await config.runtime.executeRequest(q.request);
+        const result = await config.runtime.executeRequest(q.request, lastSessionToken);
 
         await saveData({
             deliverableStatus_executionResult: DeliverableStatus_ExecutionResult.Enabled,

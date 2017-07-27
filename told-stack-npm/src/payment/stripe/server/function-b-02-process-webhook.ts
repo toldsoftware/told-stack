@@ -1,7 +1,7 @@
 import { buildFunction_common, build_binding, build_createFunctionJson, build_runFunction_common } from "../../../core/azure-functions/function-builder";
 import { FunctionTemplateConfig, ServerConfigType, ProcessQueue, StripeCheckoutTable, StripeWebhookQueue } from "../config/server-config";
 import { insertOrMergeTableEntity_sdk } from "../../../core/utils/azure-storage-binding/tables-sdk";
-import { saveEntity, doesEntityExist } from "../../../core/utils/azure-storage-sdk/tables";
+import { saveEntity_merge, doesEntityExist } from "../../../core/utils/azure-storage-sdk/tables";
 import { CheckoutStatus, SubscriptionStatus } from "../../common/checkout-types";
 
 import { Stripe as _Stripe } from "../lib/stripe";

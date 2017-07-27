@@ -61,7 +61,7 @@ export function groupToArray<T>(items: T[], getKey: (x: T) => string) {
     return Object.getOwnPropertyNames(g).map(k => g[k].items);
 }
 
-export function unique_strings(items: string[]): string[] {
+export function unique_values<T extends string>(items: T[]): T[] {
     return unique(items.filter(x => !!x), x => x);
 }
 export function unique<T>(items: T[], getKey: (x: T) => string) {

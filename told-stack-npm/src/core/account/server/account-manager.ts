@@ -1,11 +1,13 @@
-import { AccountTable, SessionInfo_Client, UserAlias, SessionInfo, UserPermission, UserEvidence, UserAliasKind, UserEvidenceKind } from "../config/types";
+import { AccountTable, SessionInfo_Client, UserAlias, SessionInfo, AccountPermission, UserEvidence, UserAliasKind, UserEvidenceKind, getAccountPermissions_userEvidenceKind, getAccountPermissions_userAliasKind } from "../config/types";
 import { TableBinding } from "../../types/functions";
 import { createSessonToken_server, createUserId_server, createEvidenceToken } from "../config/account-ids";
 import { encodeTableKey } from "../../utils/encode-key";
-import { saveTableEntities, loadTableEntity, findTableEntities } from "../../utils/azure-storage-binding/tables-sdk";
+import { saveTableEntities_merge, loadTableEntity, findTableEntities } from "../../utils/azure-storage-binding/tables-sdk";
 import { EmailProvider } from "../../providers/email-provider";
 import { createMessage_resetPasswordEmail } from "../../messages/messages";
 import { AccountServerConfig } from "../config/server-config";
+import { unique_values } from "../../utils/objects";
+import { SessionManager } from "./session-manager";
 
 function encodeAlias(kind: UserAliasKind, alias: string) {
     return `alias-${kind}-${alias}`;
@@ -16,7 +18,10 @@ function encodeEvidence(kind: UserEvidenceKind, evidence: string) {
 }
 
 export class AccountManager {
-    constructor(private config: AccountServerConfig, private emailProvider: EmailProvider) { }
+    private sessionManager: SessionManager;
+    constructor(private config: AccountServerConfig, private emailProvider: EmailProvider) {
+        this.sessionManager = new SessionManager(config);
+    }
 
     private async verifyUserExists(userId: string) {
         if (!this.doesUserExist(userId)) {
@@ -30,15 +35,15 @@ export class AccountManager {
         return !!u;
     }
 
-    async createNewUser() {
+    async createNewUser(oldSessionToken?: string) {
         const accountTableBinding = this.config.getBinding_AccountTable();
         const userId = createUserId_server();
-        await saveTableEntities(accountTableBinding, {
+        await saveTableEntities_merge(accountTableBinding, {
             PartitionKey: userId,
             RowKey: 'user',
         });
 
-        return { userId };
+        return await this.sessionManager.createNewSession(userId, [AccountPermission.SetCredentials], [], oldSessionToken);
     }
 
     private async storeUserAlias(userId: string, alias: string, data: UserAlias) {
@@ -50,10 +55,10 @@ export class AccountManager {
         // Verify Alias doesn't exist already
         const lookup = await loadTableEntity<AccountTable>(accountTableBinding, aliasEncoded, 'lookup');
         if (lookup && lookup.userId !== userId) {
-            throw 'The User Credential Already points to a Different User';
+            throw 'The User Alias Already points to a Different User';
         }
 
-        await saveTableEntities(accountTableBinding,
+        await saveTableEntities_merge(accountTableBinding,
             {
                 // Alias UserId Lookup (Don't store data here)
                 PartitionKey: aliasEncoded,
@@ -65,41 +70,76 @@ export class AccountManager {
                 RowKey: aliasEncoded,
                 userId: userId,
                 userAlias: data,
+                usageCount: 0,
             });
     }
 
-    private async storeUserEvidence(userId: string, evidence: string, data: UserEvidence) {
+    private async storeUserEvidence(userId: string, evidence: string, data: UserEvidence, options = { shouldDisableOtherEvidenceOfSameKind: true }) {
         this.verifyUserExists(userId);
 
         const accountTableBinding = this.config.getBinding_AccountTable();
         const evidenceEncoded = encodeEvidence(data.kind, evidence);
 
-        await saveTableEntities(accountTableBinding,
+        if (!options || options.shouldDisableOtherEvidenceOfSameKind) {
+            this.disableEvidenceOfKind(userId, data.kind);
+        }
+
+        await saveTableEntities_merge(accountTableBinding,
             {
                 // Credentials List (Store actual credential here)
                 PartitionKey: userId,
                 RowKey: evidenceEncoded,
                 userId: userId,
                 userEvidence: data,
+                usageCount: 0,
             });
     }
 
-    private async lookupUserAliasEntity(kind: UserAliasKind, alias: string): Promise<AccountTable> {
+    private async lookupUserAliasEntity(kind: UserAliasKind, alias: string, options = { shouldIncrementUsage: false }): Promise<AccountTable> {
         const accountTableBinding = this.config.getBinding_AccountTable();
         const aliasEncoded = encodeAlias(kind, alias);
 
         const lookup = await loadTableEntity<AccountTable>(accountTableBinding, aliasEncoded, 'lookup');
         const entity = lookup && await loadTableEntity<AccountTable>(accountTableBinding, lookup.userId, aliasEncoded);
+
+        if (entity && options && options.shouldIncrementUsage) {
+            entity.usageCount++;
+
+            await saveTableEntities_merge(accountTableBinding, {
+                PartitionKey: aliasEncoded,
+                RowKey: 'lookup',
+                usageCount: entity.usageCount
+            });
+        }
+
         if (entity.isDisabled) { return null; }
         return entity;
     }
 
-    private async lookupUserEvidenceEntity(userId: string, kind: UserEvidenceKind, evidence: string): Promise<AccountTable> {
+    private async lookupUserEvidenceEntity(userId: string, kind: UserEvidenceKind, evidence: string, options = { shouldIncrementUsage: false }): Promise<AccountTable> {
         const accountTableBinding = this.config.getBinding_AccountTable();
         const evidenceEncoded = encodeEvidence(kind, evidence);
 
         const entity = await loadTableEntity<AccountTable>(accountTableBinding, userId, evidenceEncoded);
-        if (entity.isDisabled) { return null; }
+
+        if (entity && options && options.shouldIncrementUsage) {
+            entity.usageCount++;
+
+            await saveTableEntities_merge(accountTableBinding, {
+                PartitionKey: userId,
+                RowKey: evidenceEncoded,
+                usageCount: entity.usageCount
+            });
+        }
+
+        if (!entity
+            || entity.isDisabled
+            || Date.now() > entity.userEvidence.expireTime
+            || entity.usageCount > entity.userEvidence.maxUsages
+        ) {
+            return null;
+        }
+
         return entity;
     }
 
@@ -111,7 +151,7 @@ export class AccountManager {
 
         const entities = await findTableEntities<AccountTable>(accountTableBinding, userId, evidenceEncoded_prefix);
         const entitiesDisabled = entities.map(x => ({ PartitionKey: x.PartitionKey, RowKey: x.RowKey, isDisabled: false }));
-        await saveTableEntities(accountTableBinding, ...entitiesDisabled);
+        await saveTableEntities_merge(accountTableBinding, ...entitiesDisabled);
     }
 
     async canUserClaimEmail(userId: string, email: string) {
@@ -141,9 +181,6 @@ export class AccountManager {
             }
         }
 
-        // Disable old tokens
-        this.disableEvidenceOfKind(c.userId, UserEvidenceKind.token_resetPassword);
-
         // Create new token
         const resetPasswordToken = createEvidenceToken();
         const expireTime = Date.now() + this.config.resetPasswordExpireTimeMs;
@@ -152,7 +189,8 @@ export class AccountManager {
             kind: UserEvidenceKind.token_resetPassword,
             resetPasswordToken,
             expireTime,
-        });
+            maxUsages: 1,
+        }, { shouldDisableOtherEvidenceOfSameKind: true });
 
         const resetPasswordUrl = this.config.getResetPasswordUrl(resetPasswordToken);
         const cancelUrl = this.config.getCancelResetPasswordUrl(resetPasswordToken);
@@ -160,7 +198,23 @@ export class AccountManager {
 
         return { isEmailSending: true };
     }
-}
 
-// TODO: Verify User Credential (Login)
-// TODO: User Authorization (Roles?)
+    async login(alias: { value: string, kind: UserAliasKind }, evidence?: { value: string, kind: UserEvidenceKind }) {
+        const aliasEntity = await this.lookupUserAliasEntity(alias.kind, alias.value, { shouldIncrementUsage: true });
+        const userId = aliasEntity.userId;
+        const evidenceEntity = evidence && await this.lookupUserEvidenceEntity(userId, evidence.kind, evidence.value, { shouldIncrementUsage: true });
+        const userPermissions = unique_values([
+            ...getAccountPermissions_userAliasKind(aliasEntity.userAlias.kind),
+            ...getAccountPermissions_userEvidenceKind(evidenceEntity.userEvidence.kind),
+        ]);
+
+        // TODO: User Authorizations
+        const userAuthorizations = unique_values<string>([]);
+
+        return {
+            userId,
+            userPermissions,
+            userAuthorizations,
+        };
+    }
+}
