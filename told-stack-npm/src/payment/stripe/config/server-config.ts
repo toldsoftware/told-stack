@@ -3,8 +3,8 @@ import { CheckoutStatus, SubscriptionStatus, CheckoutResult } from "../../common
 import { Stripe, StripeCharge, StripeCustomer, StripePlan, StripeSubscription, StripeEvent } from "../lib/stripe";
 import { QueueBinding, TableBinding } from "../../../core/types/functions";
 import { createTrigger } from "../../../core/azure-functions/function-builder";
-import { AccountServerConfig, SessionTable } from "../../../core/account/config/server-config";
-import { SessionInfo } from "../../../core/account/config/types";
+import { AccountServerConfig } from "../../../core/account/config/server-config";
+import { SessionInfo, SessionTable } from "../../../core/account/config/types";
 import { EmailProviderConfig } from "../../../core/providers/email-provider";
 export { SessionTable };
 export { CheckoutSubmitRequestBody };
@@ -22,7 +22,7 @@ export interface FunctionTemplateConfig {
     getBinding_stripeWebhookQueue(): QueueBinding
 
     getBinding_sessionTable(trigger: { sessionToken: string }): TableBinding;
-    getBinding_accountTable(): TableBinding;
+    // getBinding_accountTable(): TableBinding;
 }
 
 export const processQueueTrigger = createTrigger({
@@ -61,13 +61,15 @@ export interface StripeCheckoutTable extends CheckoutResult {
     plan?: StripePlan,
     subscription?: StripeSubscription,
 
-    newSessionInfo?: SessionInfo;
+    newSessionInfo: SessionInfo;
 
 
     // timeRequested: number;
     // timeSucceeded?: number;
     // timeFailed?: number;
     error?: string;
+    warning?: string;
+    warningData?: any;
 }
 
 export interface StripeCustomerLookupTable {
@@ -103,8 +105,9 @@ export interface ServerConfigType {
     getEmailHash(email: string): string;
     // createServerCheckoutId(): string;
 
-    getBinding_stripeCheckoutTable_fromTrigger(trigger: QueueTrigger_NoSession): TableBinding;
     getBinding_accountTable(): TableBinding;
+    getBinding_stripeCheckoutTable_fromTrigger(trigger: QueueTrigger_NoSession): TableBinding;
+    getBinding_stripeCustomerLookupTable_fromTrigger(trigger: QueueTrigger_NoSession): TableBinding;
 }
 
 // export enum GetUserResultError {
@@ -183,7 +186,7 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
         };
     }
 
-    getBinding_sessionTable = this.accountConfig.getBinding_SessionTable;
+    getBinding_sessionTable = this.accountConfig.getBinding_SessionTable_fromSessionToken;
     getBinding_accountTable = this.accountConfig.getBinding_AccountTable;
 
 

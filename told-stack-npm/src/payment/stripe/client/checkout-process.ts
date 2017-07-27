@@ -30,15 +30,21 @@ export class StripeCheckoutProcess implements CheckoutProcess {
 
         let observer: Observer<CheckoutResult_Client>;
         let lastResult: CheckoutResult_Client = {
-            serverCheckoutId: null,
-            clientCheckoutId,
             checkoutStatus: CheckoutStatus.NotStarted,
-            checkoutPausedReason: CheckoutPausedReason.None,
-            paymentStatus: PaymentStatus.NotStarted,
-            subscriptionStatus: SubscriptionStatus.NotStarted,
-            deliverableStatus: DeliverableStatus.NotStarted,
-            deliverableStatus_executionResult: DeliverableStatus_ExecutionResult.NotStarted,
+            newSessionInfo: null,
             timeChanged: Date.now(),
+
+            details: {
+                serverCheckoutId: null,
+                clientCheckoutId,
+                checkoutStatus: CheckoutStatus.NotStarted,
+                checkoutPausedReason: CheckoutPausedReason.None,
+                paymentStatus: PaymentStatus.NotStarted,
+                subscriptionStatus: SubscriptionStatus.NotStarted,
+                deliverableStatus: DeliverableStatus.NotStarted,
+                deliverableStatus_executionResult: DeliverableStatus_ExecutionResult.NotStarted,
+                newSessionInfo: null,
+            },
         };
 
         let actualCheckoutOptions: CheckoutOptions;
@@ -46,17 +52,17 @@ export class StripeCheckoutProcess implements CheckoutProcess {
         const updateResult = (result: Partial<CheckoutResult_Client>) => {
             console.log('StripeCheckoutProcess updateResult', { result });
 
-            if (result.clientCheckoutId && result.clientCheckoutId !== lastResult.clientCheckoutId) {
-                throw 'StripeCheckoutProcess: Cannot change clientCheckoutId';
-            }
-
-            if (result.serverCheckoutId && result.serverCheckoutId !== lastResult.serverCheckoutId) {
-                throw 'StripeCheckoutProcess: Cannot change serverCheckoutId';
+            if (result.details.serverCheckoutId && result.details.serverCheckoutId !== lastResult.details.serverCheckoutId) {
+                throw 'StripeCheckoutProcess: Cannot change serverCheckoutId once set';
             }
 
             assignPartial(lastResult, result);
-            lastResult.clientCheckoutId = clientCheckoutId;
+
+            // Update Important items
+            lastResult.checkoutStatus = result.details.checkoutStatus;
+            lastResult.newSessionInfo = result.details.newSessionInfo;
             lastResult.timeChanged = Date.now();
+
             observer.next(lastResult);
 
             this.runtime.logCheckoutEvent('ResultChange', lastResult);

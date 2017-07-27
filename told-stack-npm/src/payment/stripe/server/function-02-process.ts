@@ -3,11 +3,12 @@ import { FunctionTemplateConfig, ServerConfigType, ProcessQueue, StripeCheckoutT
 import { SubscriptionStatus, PaymentStatus, DeliverableStatus, CheckoutStatus, DeliverableStatus_ExecutionResult, CheckoutPausedReason } from "../../common/checkout-types";
 import { saveEntity as _saveEntity } from "../../../core/utils/azure-storage-sdk/tables";
 import { Stripe as _Stripe, StripeCustomer, StripePlan } from "../lib/stripe";
-import { SessionAuthenticator, AuthenticateResult } from "../../../core/account/server/session-authenticator";
+import { SessionAuthenticator } from "../../../core/account/server/session-authenticator";
 import { AccountManager } from "../../../core/account/server/account-manager";
 import { AccountTable, UserPermission } from "../../../core/account/config/types";
 import { unique_strings } from "../../../core/utils/objects";
 import { EmailProvider } from "../../../core/providers/email-provider";
+import { SessionManager } from "../../../core/account/server/session-manager";
 
 export const deps = {
     saveEntity: _saveEntity,
@@ -25,10 +26,10 @@ function buildFunction(config: FunctionTemplateConfig) {
             inStripeCheckoutTable: build_binding<StripeCheckoutTable>(config.getBinding_stripeCheckoutTable_fromTrigger(t)),
 
             inStripeCustomerLookupTable: build_binding<StripeCustomerLookupTable>(config.getBinding_stripeCustomerLookupTable_fromTrigger(t)),
-            outStripeCustomerLookupTable: build_binding<StripeCustomerLookupTable>(config.getBinding_stripeCustomerLookupTable_fromTrigger(t)),
+            // outStripeCustomerLookupTable: build_binding<StripeCustomerLookupTable>(config.getBinding_stripeCustomerLookupTable_fromTrigger(t)),
 
-            inStripeUserLookupTable: build_binding<StripeUserLookupTable>(config.getBinding_stripeUserLookupTable_fromTrigger(t)),
-            outStripeUserLookupTable: build_binding<StripeUserLookupTable>(config.getBinding_stripeUserLookupTable_fromTrigger(t)),
+            // inStripeUserLookupTable: build_binding<StripeUserLookupTable>(config.getBinding_stripeUserLookupTable_fromTrigger(t)),
+            // outStripeUserLookupTable: build_binding<StripeUserLookupTable>(config.getBinding_stripeUserLookupTable_fromTrigger(t)),
         }));
 }
 
@@ -38,6 +39,9 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
     const authenticator = new SessionAuthenticator(context);
     const emailProvider = new EmailProvider(config.emailConfig);
     const accountManager = new AccountManager(config.accountConfig, emailProvider);
+    const sessionManager = new SessionManager(config.accountConfig);
+
+    // TODO: Refactor this into methods
 
     context.log('START');
 
@@ -98,67 +102,50 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
     let customer: StripeCustomer = null;
     let userId: string = null;
 
-    // Verify the user owns the stripe email (has authority over that stripe email)
+    // Make sure user exists and can claim the email (upon payment success)
     try {
 
-        const userBySessionToken = context.bindings.inSessionTable;
-        const ownerOfStripeEmail = context.bindings.inStripeUserLookupTable;
+        const sessionInfo = context.bindings.inSessionTable;
+        // const ownerOfStripeEmail = context.bindings.inStripeUserLookupTable;
 
-        const auth = authenticator.authenticateSession(q.request.sessionInfo);
+        const doesUserExist = accountManager.doesUserExist(sessionInfo && sessionInfo.userId);
 
-        switch (auth) {
-            // case AuthenticateResult.IncorrectUserIdClaim:
-            //     await saveData({
-            //         checkoutStatus: CheckoutStatus.Submission_Paused,
-            //         checkoutPausedReason: CheckoutPausedReason.SessionNotAuthenticated_CreateNewSession
-            //     });
-            //     return context.done({ error: 'Incorrect User Id Claim', q });
+        const emails = unique_strings([q.request.checkoutOptions.user.email, q.request.token.email]);
+        const canClaimEmails = (await Promise.all(
+            emails.map((x) => accountManager.canUserClaimEmail(sessionInfo && sessionInfo.userId, x))
+        )).every(x => x);
 
-            case AuthenticateResult.UnknownSession:
-            case AuthenticateResult.AnonymousUser:
-                // case AuthenticateResult.MissingUserIdClaim:
+        if (!doesUserExist) {
+            // New User
 
-                // Anonymous (New User - unless known stripe email)
-
-                if (ownerOfStripeEmail) {
-                    await saveData({
-                        checkoutStatus: CheckoutStatus.Submission_Paused,
-                        checkoutPausedReason: CheckoutPausedReason.EmailBelongsToAccount_LoginAndResubmit
-                    });
-                    return context.done({ error: 'User Requires Login for Known Stripe Email', q });
-                }
-
-                // Create User Id
-                const newSessionInfo = await accountManager.createNewUserAndSession(q.request.sessionInfo);
-                const emails = unique_strings([q.request.checkoutOptions.user.email, q.request.token.email]);
-
-                for (let x of emails) {
-                    await accountManager.storeAlias_email_unverified(newSessionInfo.userId, x);
-                }
-
-                userId = newSessionInfo.userId;
-
+            if (!canClaimEmails) {
                 await saveData({
-                    newSessionInfo
+                    checkoutStatus: CheckoutStatus.Submission_Paused,
+                    checkoutPausedReason: CheckoutPausedReason.EmailAlreadyClaimed_LoginAndResubmit
                 });
+                return context.done({ error: 'User Requires Login for Known Stripe Email', q });
+            }
 
-                break;
+            // Create User Id
+            const newUser = await accountManager.createNewUser();
+            const newSessionInfo = await sessionManager.createNewSession(userId, [UserPermission.ChangePassword], q.request.sessionInfo.sessionToken);
+            userId = newSessionInfo.userId;
 
-            case AuthenticateResult.Authenticated:
-                // Authenticated (Existing User)
+            await saveData({
+                newSessionInfo
+            });
+        } else {
+            // Existing User
+            if (!canClaimEmails) {
+                await saveData({
+                    checkoutStatus: CheckoutStatus.Submission_Paused,
+                    checkoutPausedReason: CheckoutPausedReason.EmailBelongsToOtherUser_LoginToCorrectAccount
+                });
+                return context.done({ error: 'User does not own the Email', q });
+            }
 
-                if (userBySessionToken.userId !== ownerOfStripeEmail.userId) {
-                    await saveData({
-                        checkoutStatus: CheckoutStatus.Submission_Paused,
-                        checkoutPausedReason: CheckoutPausedReason.EmailBelongsToOtherUser_LoginToCorrectAccount
-                    });
-                    return context.done({ error: 'User does not own the Stripe Email', q });
-                }
-
-                userId = userBySessionToken.userId;
-                break;
+            userId = sessionInfo.userId;
         }
-
 
     } catch (err) {
         await saveData({
@@ -169,6 +156,9 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
         return context.done({ error: 'Unknown User Error', err, q });
     }
 
+    // UserId exists
+    // User can claim email (but don't do so until customer creation succeeds)
+
     try {
         // Execute Charge With Stripe
         await saveData({
@@ -178,8 +168,37 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
         // Lookup Existing Customer using Email
         const customerLookup = context.bindings.inStripeCustomerLookupTable;
 
-        if (!customerLookup) {
-            // New Customer
+        if (customerLookup) {
+            // Existing Customer
+
+            try {
+                customer = await stripe.customers.retrieve(customerLookup.customerId);
+
+                if (customer) {
+                    // Update Payment Source
+                    customer = await stripe.customers.update({
+                        source: q.request.token.id,
+                    });
+                }
+
+                if (!customer) {
+                    // Log Missing Customer
+                    await saveData({
+                        warning: 'Customer Not Found',
+                        warningData: customerLookup,
+                    });
+                }
+            } catch (err) {
+                // Log Customer Retrieve Error
+                await saveData({
+                    warning: 'Customer Not Found',
+                    warningData: customerLookup,
+                });
+            }
+        }
+
+        if (!customer) {
+            // New Customer (Or Missing)
 
             // Create Customer with Stripe
             const newCustomer = await stripe.customers.create({
@@ -190,29 +209,23 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
             customer = newCustomer;
 
             // Save
-            context.bindings.outStripeCustomerLookupTable = { customerId: customer.id };
-            context.bindings.outStripeUserLookupTable = { userId };
-
-        } else { //else if (customerLookup) {
-
-            // Existing Customer
-            try {
-                customer = await stripe.customers.retrieve(customerLookup.customerId);
-
-                if (!customer) {
-                    throw 'No Customer Retrieved';
-                }
-            } catch (err) {
-                throw { error: 'Stripe Failed to Find Customer by Customer Id', innerError: err };
-            }
+            // context.bindings.outStripeCustomerLookupTable = { customerId: customer.id };
+            const binding = config.getBinding_stripeCustomerLookupTable_fromTrigger(q);
+            await deps.saveEntity(
+                binding.connection,
+                binding.tableName,
+                binding.partitionKey,
+                binding.rowKey,
+                { customerId: customer.id }
+            );
         }
 
         await saveData({
-            // paymentStatus: PaymentStatus.CustomerCreated,
             customer,
             userId,
         });
 
+        // Create Charge
         const charge = await stripe.charges.create({
             customer: customer.id,
             amount: q.request.checkoutOptions.product.amountCents,

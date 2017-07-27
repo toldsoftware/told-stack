@@ -1,9 +1,8 @@
 import { TableBinding, HttpBinding } from "../../types/functions";
-export * from './types';
 
 export interface FunctionTemplateConfig {
     getBinding_http: (trigger: { sessionToken: string }) => HttpBinding;
-    getBinding_SessionTable: (trigger: { sessionToken: string }) => TableBinding;
+    getBinding_SessionTable_fromSessionToken: (trigger: { sessionToken: string }) => TableBinding;
 }
 
 export const sessionTokenTrigger = {
@@ -33,9 +32,9 @@ export class AccountServerConfig implements ServerConfigType, FunctionTemplateCo
         };
     }
 
-    getBinding_SessionTable = (trigger: { sessionToken: string }): TableBinding => {
+    getBinding_SessionTable_fromSessionToken = (trigger: { sessionToken: string }): TableBinding => {
         return {
-            tableName: 'account',
+            tableName: 'session',
             partitionKey: `${trigger.sessionToken}`,
             rowKey: `session-user`,
             connection: this.storageConnection
@@ -44,7 +43,7 @@ export class AccountServerConfig implements ServerConfigType, FunctionTemplateCo
 
     getBinding_AccountTable = (): TableBinding => {
         return {
-            tableName: 'account',
+            tableName: 'user',
             connection: this.storageConnection,
             partitionKey: undefined,
             rowKey: undefined,

@@ -1,6 +1,6 @@
 import { AccountTable, SessionInfo_Client, UserAlias, SessionInfo, UserPermission, UserEvidence, UserAliasKind, UserEvidenceKind } from "../config/types";
 import { TableBinding } from "../../types/functions";
-import { createSessonToken_server, createUserId_server, createSecurityToken } from "../config/account-ids";
+import { createSessonToken_server, createUserId_server, createEvidenceToken } from "../config/account-ids";
 import { encodeTableKey } from "../../utils/encode-key";
 import { saveTableEntities, loadTableEntity, findTableEntities } from "../../utils/azure-storage-binding/tables-sdk";
 import { EmailProvider } from "../../providers/email-provider";
@@ -18,46 +18,32 @@ function encodeEvidence(kind: UserEvidenceKind, evidence: string) {
 export class AccountManager {
     constructor(private config: AccountServerConfig, private emailProvider: EmailProvider) { }
 
-    async createNewUserAndSession(sessionInfo: SessionInfo_Client): Promise<SessionInfo> {
+    private async verifyUserExists(userId: string) {
+        if (!this.doesUserExist(userId)) {
+            throw 'The User does not Exist';
+        }
+    }
+
+    async doesUserExist(userId: string) {
         const accountTableBinding = this.config.getBinding_AccountTable();
-        const sessionToken = createSessonToken_server();
+        const u = loadTableEntity(accountTableBinding, userId, 'user');
+        return !!u;
+    }
+
+    async createNewUser() {
+        const accountTableBinding = this.config.getBinding_AccountTable();
         const userId = createUserId_server();
+        await saveTableEntities(accountTableBinding, {
+            PartitionKey: userId,
+            RowKey: 'user',
+        });
 
-        await saveTableEntities(accountTableBinding,
-            {
-                // Session User
-                PartitionKey: sessionToken,
-                RowKey: 'session-user',
-                sessionToken,
-                userId,
-                isAnonymous: false,
-                fromSessionToken: sessionInfo.sessionToken,
-            }, {
-                // User Sessions
-                PartitionKey: userId,
-                RowKey: sessionToken,
-                sessionToken,
-                userId,
-                isAnonymous: false,
-                fromSessionToken: sessionInfo.sessionToken,
-            }, {
-                // User List Partition
-                PartitionKey: 'users',
-                RowKey: userId,
-                userId,
-                sessionToken: undefined,
-                isAnonymous: undefined,
-                fromSessionToken: undefined,
-            });
-
-        return {
-            sessionToken,
-            userId,
-            isAnonymous: false,
-        };
+        return { userId };
     }
 
     private async storeUserAlias(userId: string, alias: string, data: UserAlias) {
+        this.verifyUserExists(userId);
+
         const accountTableBinding = this.config.getBinding_AccountTable();
         const aliasEncoded = encodeAlias(data.kind, alias);
 
@@ -69,12 +55,12 @@ export class AccountManager {
 
         await saveTableEntities(accountTableBinding,
             {
-                // Credential UserId Lookup (Don't store actual credential here)
+                // Alias UserId Lookup (Don't store data here)
                 PartitionKey: aliasEncoded,
                 RowKey: 'lookup',
                 userId: userId,
             }, {
-                // User Credentials List (Store actual credential here)
+                // User Alias List (Store data here)
                 PartitionKey: userId,
                 RowKey: aliasEncoded,
                 userId: userId,
@@ -82,7 +68,9 @@ export class AccountManager {
             });
     }
 
-    async storeUserEvidence(userId: string, evidence: string, data: UserEvidence) {
+    private async storeUserEvidence(userId: string, evidence: string, data: UserEvidence) {
+        this.verifyUserExists(userId);
+
         const accountTableBinding = this.config.getBinding_AccountTable();
         const evidenceEncoded = encodeEvidence(data.kind, evidence);
 
@@ -116,6 +104,8 @@ export class AccountManager {
     }
 
     private async disableEvidenceOfKind(userId: string, kind: UserEvidenceKind) {
+        this.verifyUserExists(userId);
+
         const accountTableBinding = this.config.getBinding_AccountTable();
         const evidenceEncoded_prefix = encodeEvidence(kind, '');
 
@@ -124,9 +114,14 @@ export class AccountManager {
         await saveTableEntities(accountTableBinding, ...entitiesDisabled);
     }
 
+    async canUserClaimEmail(userId: string, email: string) {
+        const emailEntity = await this.lookupUserAliasEntity(UserAliasKind.email, email);
+        return !emailEntity || emailEntity.userId === userId;
+    }
+
     async storeAlias_email_unverified(userId: string, email: string) {
         await this.storeUserAlias(userId, email, {
-            kind: UserAliasKind.email_unverified,
+            kind: UserAliasKind.email,
             email,
         });
     }
@@ -135,7 +130,7 @@ export class AccountManager {
         const emailProvider = this.emailProvider;
 
         // Get UserId
-        const c = await this.lookupUserAliasEntity(UserAliasKind.email_unverified, email);
+        const c = await this.lookupUserAliasEntity(UserAliasKind.email, email);
 
         // Do not send this information to the client (Instead, tell user that if email exists it will be sent and offer customer support)
         // Do not send email to unknown emails (could be used to force server to spam)
@@ -150,7 +145,7 @@ export class AccountManager {
         this.disableEvidenceOfKind(c.userId, UserEvidenceKind.token_resetPassword);
 
         // Create new token
-        const resetPasswordToken = createSecurityToken();
+        const resetPasswordToken = createEvidenceToken();
         const expireTime = Date.now() + this.config.resetPasswordExpireTimeMs;
 
         this.storeUserEvidence(c.userId, resetPasswordToken, {

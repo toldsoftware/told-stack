@@ -26,8 +26,8 @@ export function createUserId_server() {
     return `us_${iso}_${rand}`;
 }
 
-export function createSecurityToken() {
+export function createEvidenceToken() {
     const now = Date.now();
     const rand = randHex(64);
-    return `sec_${now}_${rand}`;
+    return `e_${now}_${rand}`;
 }

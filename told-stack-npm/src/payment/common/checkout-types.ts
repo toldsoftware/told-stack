@@ -1,4 +1,5 @@
 import { Observable } from "../../core/utils/observable";
+import { SessionInfo } from "../../core/account/config/types";
 
 export interface CheckoutBusinessOptions {
     name: string;
@@ -81,7 +82,7 @@ export enum CheckoutPausedReason {
     SessionNotAuthenticated_CreateNewSession = 'SessionNotAuthenticated_CreateNewSession',
 
     // The Submission Requires User Login with the Stripe Email
-    EmailBelongsToAccount_LoginAndResubmit = 'EmailBelongsToAccount_LoginAndResubmit',
+    EmailAlreadyClaimed_LoginAndResubmit = 'EmailAlreadyClaimed_LoginAndResubmit',
 
     // Email was Found, but Belongs to a Different User -> Login to Correct Account
     EmailBelongsToOtherUser_LoginToCorrectAccount = 'EmailBelongsToOtherUser_LoginToCorrectAccount',
@@ -155,11 +156,16 @@ export interface CheckoutResult {
     deliverableStatus: DeliverableStatus;
     deliverableStatus_executionResult: DeliverableStatus_ExecutionResult;
 
+    newSessionInfo: SessionInfo;
     error?: string;
 }
 
-export interface CheckoutResult_Client extends CheckoutResult {
+export interface CheckoutResult_Client {
+    checkoutStatus: CheckoutStatus;
+    newSessionInfo: SessionInfo;
     timeChanged: number;
+
+    details: CheckoutResult;
 }
 
 export interface CheckoutProcess {
