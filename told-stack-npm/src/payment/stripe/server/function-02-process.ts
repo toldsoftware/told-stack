@@ -5,7 +5,7 @@ import { saveEntity as _saveEntity } from "../../../core/utils/azure-storage-sdk
 import { Stripe as _Stripe, StripeCustomer, StripePlan } from "../lib/stripe";
 import { SessionAuthenticator, AuthenticateResult } from "../../../core/account/server/session-authenticator";
 import { AccountManager } from "../../../core/account/server/account-manager";
-import { AccountTable, UserAccess } from "../../../core/account/config/types";
+import { AccountTable, UserPermission } from "../../../core/account/config/types";
 import { unique_strings } from "../../../core/utils/objects";
 import { EmailProvider } from "../../../core/providers/email-provider";
 
@@ -129,11 +129,12 @@ export const runFunction = build_runFunction_common(buildFunction, async (config
                 }
 
                 // Create User Id
-                const newSessionInfo = accountManager.createNewUserAndSession(q.request.sessionInfo);
+                const newSessionInfo = await accountManager.createNewUserAndSession(q.request.sessionInfo);
                 const emails = unique_strings([q.request.checkoutOptions.user.email, q.request.token.email]);
-                emails.forEach(x => {
-                    accountManager.storeCredential_email_unverified(newSessionInfo.userId, x);
-                });
+
+                for (let x of emails) {
+                    await accountManager.storeAlias_email_unverified(newSessionInfo.userId, x);
+                }
 
                 userId = newSessionInfo.userId;
 

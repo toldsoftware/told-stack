@@ -16,11 +16,15 @@ export interface ServerConfigType {
 
 export class AccountServerConfig implements ServerConfigType, FunctionTemplateConfig {
 
+    resetPasswordExpireTimeMs = this.options.resetPasswordExpireTimeMs || 24 * 60 * 60 * 1000;
     storageConnection = this.options.storageConnection_appSettingName || 'AZURE_STORAGE_CONNECTION_STRING';
 
 
     constructor(private options?: {
-        storageConnection_appSettingName?: string
+        getVerifyUrl: (verificationToken: string) => string,
+        getCancelVerifyUrl: (verificationToken: string) => string,
+        storageConnection_appSettingName?: string,
+        resetPasswordExpireTimeMs: number,
     }) { }
 
     getBinding_http = (trigger: { sessionToken: string }): HttpBinding => {
@@ -46,6 +50,9 @@ export class AccountServerConfig implements ServerConfigType, FunctionTemplateCo
             rowKey: undefined,
         };
     }
+
+    getResetPasswordUrl = this.options.getVerifyUrl;
+    getCancelResetPasswordUrl = this.options.getCancelVerifyUrl;
 
     // getBinding_UserTable = (trigger: { userId: string }): TableBinding => {
     //     return {

@@ -123,6 +123,35 @@ export async function loadEntity_parse<T>(connection: string, tableName: string,
 //     }
 // }
 
+export async function loadEntities_prefix<T>(connection: string, tableName: string, partitionKey: string, rowKey_prefix: string, shouldAutoParseJson = true) {
+    if (FORCE_LOWER_CASE) {
+        partitionKey = partitionKey.toLowerCase();
+    }
+
+    const rowKey_prefix_end = rowKey_prefix.substr(0, rowKey_prefix.length - 1)
+        + String.fromCharCode(rowKey_prefix[rowKey_prefix.length - 1].charCodeAt(0) + 1);
+
+    const query = new TableQuery()
+        .where('PartitionKey == ? && RowKey >= ? && RowKey <= ?', partitionKey, rowKey_prefix, rowKey_prefix_end);
+
+    const entities = await queryEntities(connection, tableName, query);
+
+    if (shouldAutoParseJson) {
+        for (let data of entities) {
+            for (let k in data) {
+                const x = data[k];
+                if (typeof x === 'string') {
+                    try {
+                        data[k] = JSON.parse(x);
+                    } catch (err) { }
+                }
+            }
+        }
+    }
+
+    return entities as any as T[];
+}
+
 export async function loadEntities(connection: string, tableName: string, partitionKey: string, count: number) {
 
     if (FORCE_LOWER_CASE) {

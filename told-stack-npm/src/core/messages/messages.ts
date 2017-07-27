@@ -1,18 +1,20 @@
 export interface MessageData {
     kind: MessageKind;
-    args: { [name: string]: string };
+    args: { [name: string]: string | number };
 }
 
 export enum MessageKind {
-    VerificationEmail = 'VerificationEmail',
+    ResetPasswordEmail = 'ResetPasswordEmail',
 }
 
-export function createMessage_verificationEmail(email: string, verificationToken: string): MessageData {
+export function createMessage_resetPasswordEmail(email: string, resetPasswordUrl: string, cancelUrl: string, expireTime: number): MessageData {
     return {
-        kind: MessageKind.VerificationEmail,
+        kind: MessageKind.ResetPasswordEmail,
         args: {
             email,
-            verificationToken
+            resetPasswordUrl,
+            cancelUrl,
+            expireTime,
         }
     };
 }

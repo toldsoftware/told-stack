@@ -1,21 +1,29 @@
-import { AccountTable, SessionInfo_Client, UserCredential, SessionInfo, UserAccess, UserCredentialKind } from "../config/types";
+import { AccountTable, SessionInfo_Client, UserAlias, SessionInfo, UserPermission, UserEvidence, UserAliasKind, UserEvidenceKind } from "../config/types";
 import { TableBinding } from "../../types/functions";
-import { createSessonToken_server, createUserId_server, createVerificationToken } from "../config/account-ids";
+import { createSessonToken_server, createUserId_server, createSecurityToken } from "../config/account-ids";
 import { encodeTableKey } from "../../utils/encode-key";
-import { saveTableEntities, loadTableEntity } from "../../utils/azure-storage-binding/tables-sdk";
+import { saveTableEntities, loadTableEntity, findTableEntities } from "../../utils/azure-storage-binding/tables-sdk";
 import { EmailProvider } from "../../providers/email-provider";
-import { createMessage_verificationEmail } from "../../messages/messages";
+import { createMessage_resetPasswordEmail } from "../../messages/messages";
 import { AccountServerConfig } from "../config/server-config";
+
+function encodeAlias(kind: UserAliasKind, alias: string) {
+    return `alias-${kind}-${alias}`;
+}
+
+function encodeEvidence(kind: UserEvidenceKind, evidence: string) {
+    return `evidence-${kind}-${evidence}`;
+}
 
 export class AccountManager {
     constructor(private config: AccountServerConfig, private emailProvider: EmailProvider) { }
 
-    createNewUserAndSession(sessionInfo: SessionInfo_Client): SessionInfo {
+    async createNewUserAndSession(sessionInfo: SessionInfo_Client): Promise<SessionInfo> {
         const accountTableBinding = this.config.getBinding_AccountTable();
         const sessionToken = createSessonToken_server();
         const userId = createUserId_server();
 
-        saveTableEntities(accountTableBinding,
+        await saveTableEntities(accountTableBinding,
             {
                 // Session User
                 PartitionKey: sessionToken,
@@ -49,65 +57,113 @@ export class AccountManager {
         };
     }
 
-    private storeCredential(userId: string, cred: UserCredential, kind: UserCredentialKind, lookup: string) {
+    private async storeUserAlias(userId: string, alias: string, data: UserAlias) {
         const accountTableBinding = this.config.getBinding_AccountTable();
-        const lookupEncoded = encodeTableKey(`${kind}:${lookup}`);
+        const aliasEncoded = encodeAlias(data.kind, alias);
 
-        saveTableEntities(accountTableBinding,
+        // Verify Alias doesn't exist already
+        const lookup = await loadTableEntity<AccountTable>(accountTableBinding, aliasEncoded, 'lookup');
+        if (lookup && lookup.userId !== userId) {
+            throw 'The User Credential Already points to a Different User';
+        }
+
+        await saveTableEntities(accountTableBinding,
             {
-                // Credential Lookup
-                PartitionKey: lookupEncoded,
+                // Credential UserId Lookup (Don't store actual credential here)
+                PartitionKey: aliasEncoded,
                 RowKey: 'lookup',
-                userCredential: cred,
                 userId: userId,
-                sessionToken: undefined,
-                isAnonymous: undefined,
-                fromSessionToken: undefined,
             }, {
-                // User Credentials List
+                // User Credentials List (Store actual credential here)
                 PartitionKey: userId,
-                RowKey: lookupEncoded,
-                userCredential: cred,
+                RowKey: aliasEncoded,
                 userId: userId,
-                sessionToken: undefined,
-                isAnonymous: undefined,
-                fromSessionToken: undefined,
+                userAlias: data,
             });
     }
 
-    private async  lookupCredential(kind: UserCredentialKind, lookup: string) {
+    async storeUserEvidence(userId: string, evidence: string, data: UserEvidence) {
         const accountTableBinding = this.config.getBinding_AccountTable();
-        const lookupEncoded = encodeTableKey(`${kind}:${lookup}`);
-        return await loadTableEntity<AccountTable>(accountTableBinding, lookupEncoded, 'lookup');
+        const evidenceEncoded = encodeEvidence(data.kind, evidence);
+
+        await saveTableEntities(accountTableBinding,
+            {
+                // Credentials List (Store actual credential here)
+                PartitionKey: userId,
+                RowKey: evidenceEncoded,
+                userId: userId,
+                userEvidence: data,
+            });
     }
 
-    storeCredential_email_unverified(userId: string, email: string) {
-        this.storeCredential(userId, {
-            kind: UserCredentialKind.email_unverified,
-            access: UserAccess.None_SendEmailVerification,
+    private async lookupUserAliasEntity(kind: UserAliasKind, alias: string): Promise<AccountTable> {
+        const accountTableBinding = this.config.getBinding_AccountTable();
+        const aliasEncoded = encodeAlias(kind, alias);
+
+        const lookup = await loadTableEntity<AccountTable>(accountTableBinding, aliasEncoded, 'lookup');
+        const entity = lookup && await loadTableEntity<AccountTable>(accountTableBinding, lookup.userId, aliasEncoded);
+        if (entity.isDisabled) { return null; }
+        return entity;
+    }
+
+    private async lookupUserEvidenceEntity(userId: string, kind: UserEvidenceKind, evidence: string): Promise<AccountTable> {
+        const accountTableBinding = this.config.getBinding_AccountTable();
+        const evidenceEncoded = encodeEvidence(kind, evidence);
+
+        const entity = await loadTableEntity<AccountTable>(accountTableBinding, userId, evidenceEncoded);
+        if (entity.isDisabled) { return null; }
+        return entity;
+    }
+
+    private async disableEvidenceOfKind(userId: string, kind: UserEvidenceKind) {
+        const accountTableBinding = this.config.getBinding_AccountTable();
+        const evidenceEncoded_prefix = encodeEvidence(kind, '');
+
+        const entities = await findTableEntities<AccountTable>(accountTableBinding, userId, evidenceEncoded_prefix);
+        const entitiesDisabled = entities.map(x => ({ PartitionKey: x.PartitionKey, RowKey: x.RowKey, isDisabled: false }));
+        await saveTableEntities(accountTableBinding, ...entitiesDisabled);
+    }
+
+    async storeAlias_email_unverified(userId: string, email: string) {
+        await this.storeUserAlias(userId, email, {
+            kind: UserAliasKind.email_unverified,
             email,
-        }, UserCredentialKind.email_unverified, email);
+        });
     }
 
-    async sendEmailVerification(email: string) {
+    async sendEmail_resetPassword(email: string): Promise<{ isEmailSending: boolean, error?: string }> {
         const emailProvider = this.emailProvider;
 
         // Get UserId
-        const c = await this.lookupCredential(UserCredentialKind.email_unverified, email);
+        const c = await this.lookupUserAliasEntity(UserAliasKind.email_unverified, email);
 
+        // Do not send this information to the client (Instead, tell user that if email exists it will be sent and offer customer support)
+        // Do not send email to unknown emails (could be used to force server to spam)
         if (!c) {
-            throw 'Unverified Email not Found: ' + email;
+            return {
+                isEmailSending: false,
+                error: 'Email not Found',
+            }
         }
 
-        const verificationToken = createVerificationToken();
-        this.storeCredential(c.userId, {
-            kind: UserCredentialKind.email_verification,
-            access: UserAccess.Full_CreatePassword,
-            email,
-            verificationToken,
-        }, UserCredentialKind.email_verification, email);
+        // Disable old tokens
+        this.disableEvidenceOfKind(c.userId, UserEvidenceKind.token_resetPassword);
 
-        await emailProvider.sendEmail(email, createMessage_verificationEmail(email, verificationToken));
+        // Create new token
+        const resetPasswordToken = createSecurityToken();
+        const expireTime = Date.now() + this.config.resetPasswordExpireTimeMs;
+
+        this.storeUserEvidence(c.userId, resetPasswordToken, {
+            kind: UserEvidenceKind.token_resetPassword,
+            resetPasswordToken,
+            expireTime,
+        });
+
+        const resetPasswordUrl = this.config.getResetPasswordUrl(resetPasswordToken);
+        const cancelUrl = this.config.getCancelResetPasswordUrl(resetPasswordToken);
+        await emailProvider.sendEmail(email, createMessage_resetPasswordEmail(email, resetPasswordUrl, cancelUrl, expireTime));
+
+        return { isEmailSending: true };
     }
 }
 

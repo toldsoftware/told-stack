@@ -19,22 +19,71 @@ export interface SessionTable extends SessionInfo {
 export interface AccountTable extends SessionInfo {
     PartitionKey: string;
     RowKey: string;
+
     fromSessionToken?: string;
-    userCredential?: UserCredential;
+
+    userAlias?: UserAlias;
+    userCredential?: UserEvidence;
+
+    isDisabled?: boolean;
 }
 
-export enum UserAccess {
+export enum UserPermission {
     None = '',
-    None_SendEmailVerification = 'None_SendEmailVerification',
+    SendEmail_ResetPassword = 'SendEmail_ResetPassword',
+    ResetPassword = 'ResetPassword',
     Full = 'Full',
-    Full_CreatePassword = 'Full_CreatePassword',
 }
 
-export enum UserCredentialKind {
+export function getUserAccess_userAliasKind(kind: UserAliasKind): UserPermission[] {
+    switch (kind) {
+        case UserAliasKind.facebookId:
+            return [UserPermission.Full];
+
+        case UserAliasKind.email_unverified:
+        case UserAliasKind.email_verified:
+            return [UserPermission.SendEmail_ResetPassword];
+
+        default:
+            return [];
+    }
+}
+
+export function getUserAccess_userCredentialKind(kind: UserEvidenceKind): UserPermission[] {
+    switch (kind) {
+        case UserEvidenceKind.password:
+            return [UserPermission.Full];
+
+        case UserEvidenceKind.token_resetPassword:
+            return [UserPermission.ResetPassword];
+
+        default:
+            return [];
+    }
+}
+
+export enum UserAliasKind {
     email_unverified = 'email_unverified',
-    email_verification = 'email_verification',
+    email_verified = 'email_verified',
+    facebookId = 'facebookId',
 }
 
-export type UserCredential =
-    { kind: UserCredentialKind.email_unverified; access:UserAccess.None_SendEmailVerification; email: string; }
-    | { kind: UserCredentialKind.email_verification; access:UserAccess.Full_CreatePassword; email: string; verificationToken: string; }
+export enum UserEvidenceKind {
+    password = 'password',
+    token_resetPassword = 'token_resetPassword',
+}
+
+export type UserAlias =
+    {
+        kind: UserAliasKind.email_unverified;
+        email: string;
+    }
+    ;
+
+export type UserEvidence =
+    {
+        kind: UserEvidenceKind.token_resetPassword;
+        resetPasswordToken: string;
+        expireTime: number;
+    }
+    ;
