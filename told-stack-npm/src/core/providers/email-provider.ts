@@ -4,6 +4,7 @@ export interface EmailProviderConfig {
 
 }
 
+// TODO: Finish this
 export class EmailProvider {
     constructor(config: EmailProviderConfig) { }
 

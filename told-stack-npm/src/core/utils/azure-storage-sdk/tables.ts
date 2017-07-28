@@ -1,4 +1,4 @@
-import { createTableService, TableService, TableUtilities, TableQuery, ErrorOrResult } from "azure-storage";
+import { createTableService as createTableServiceInner, TableService, TableUtilities, TableQuery, ErrorOrResult } from "azure-storage";
 import { asyncIt } from "./async-it";
 
 const FORCE_LOWER_CASE = false;
@@ -7,6 +7,10 @@ const entGen = TableUtilities.entityGenerator;
 
 export type EntityValueTypes = string | boolean | number | Date | Object;
 export type EntityValues = { [key: string]: EntityValueTypes };
+
+function createTableService(connection: string) {
+    return createTableServiceInner(process.env[connection]);
+}
 
 export async function doesEntityExist(connection: string, tableName: string, partitionKey: string, rowKey: string) {
     const tableService = createTableService(connection);
@@ -88,7 +92,7 @@ export async function loadEntity_parse<T>(connection: string, tableName: string,
 
         return { ...data, ...metadata } as typeof entity & typeof metadata & T;
     } catch (err) {
-        console.warn(err);
+        // console.warn(err);
 
         if (err && err.code === 'ResourceNotFound') {
             return null;

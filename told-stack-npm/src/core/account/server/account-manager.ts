@@ -9,12 +9,12 @@ import { AccountServerConfig } from "../config/server-config";
 import { unique_values } from "../../utils/objects";
 import { SessionManager } from "./session-manager";
 
-function encodeAlias(kind: UserAliasKind, alias: string) {
-    return `alias-${kind}-${alias}`;
+export function encodeAlias(kind: UserAliasKind, alias: string) {
+    return encodeURIComponent(`alias-${kind}-${alias}`);
 }
 
-function encodeEvidence(kind: UserEvidenceKind, evidence: string) {
-    return `evidence-${kind}-${evidence}`;
+export function encodeEvidence(kind: UserEvidenceKind, evidence: string) {
+    return encodeURIComponent(`evidence-${kind}-${evidence}`);
 }
 
 export class AccountManager {
@@ -106,8 +106,8 @@ export class AccountManager {
             entity.usageCount++;
 
             await saveTableEntities_merge(accountTableBinding, {
-                PartitionKey: aliasEncoded,
-                RowKey: 'lookup',
+                PartitionKey: lookup.userId,
+                RowKey: aliasEncoded,
                 usageCount: entity.usageCount
             });
         }
@@ -192,29 +192,25 @@ export class AccountManager {
             maxUsages: 1,
         }, { shouldDisableOtherEvidenceOfSameKind: true });
 
-        const resetPasswordUrl = this.config.getResetPasswordUrl(resetPasswordToken);
-        const cancelUrl = this.config.getCancelResetPasswordUrl(resetPasswordToken);
+        const resetPasswordUrl = this.config.getUrl_resetPassword(resetPasswordToken);
+        const cancelUrl = this.config.getUrl_cancelResetPassword(resetPasswordToken);
         await emailProvider.sendEmail(email, createMessage_resetPasswordEmail(email, resetPasswordUrl, cancelUrl, expireTime));
 
         return { isEmailSending: true };
     }
 
-    async login(alias: { value: string, kind: UserAliasKind }, evidence?: { value: string, kind: UserEvidenceKind }) {
+    async login(alias: { value: string, kind: UserAliasKind }, evidence?: { value: string, kind: UserEvidenceKind }, oldSessionToken?: string) {
         const aliasEntity = await this.lookupUserAliasEntity(alias.kind, alias.value, { shouldIncrementUsage: true });
         const userId = aliasEntity.userId;
         const evidenceEntity = evidence && await this.lookupUserEvidenceEntity(userId, evidence.kind, evidence.value, { shouldIncrementUsage: true });
-        const userPermissions = unique_values([
+        const accountPermissions = unique_values([
             ...getAccountPermissions_userAliasKind(aliasEntity.userAlias.kind),
-            ...getAccountPermissions_userEvidenceKind(evidenceEntity.userEvidence.kind),
+            ...evidenceEntity && getAccountPermissions_userEvidenceKind(evidenceEntity.userEvidence.kind) || [],
         ]);
 
         // TODO: User Authorizations
         const userAuthorizations = unique_values<string>([]);
 
-        return {
-            userId,
-            userPermissions,
-            userAuthorizations,
-        };
+        return await this.sessionManager.createNewSession(userId, accountPermissions, userAuthorizations, oldSessionToken);
     }
 }

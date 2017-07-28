@@ -13,8 +13,6 @@ export class SessionManager {
             userId,
             accountPermissions,
             userAuthorizations,
-
-            oldSessionToken,
         };
 
         const sessionTableBinding = this.config.getBinding_SessionTable_fromSessionToken({ sessionToken });
@@ -24,18 +22,14 @@ export class SessionManager {
                 // Session User
                 PartitionKey: sessionTableBinding.partitionKey,
                 RowKey: sessionTableBinding.rowKey,
-                sessionToken,
-                userId,
-                isAnonymous: false,
-                fromSessionToken: sessionInfo.sessionToken,
+                fromSessionToken: oldSessionToken,
+                ...sessionInfo
             }, {
                 // User Sessions List
                 PartitionKey: userId,
                 RowKey: sessionToken,
-                sessionToken,
-                userId,
-                isAnonymous: false,
-                fromSessionToken: sessionInfo.sessionToken,
+                fromSessionToken: oldSessionToken,
+                ...sessionInfo
             });
 
         return sessionInfo;

@@ -11,8 +11,6 @@ export interface SessionInfo {
     userId: string;
     accountPermissions: AccountPermission[];
     userAuthorizations: string[];
-
-    oldSessionToken?: string;
 }
 
 export interface SessionTable extends SessionInfo {

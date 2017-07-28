@@ -19,11 +19,11 @@ export class AccountServerConfig implements ServerConfigType, FunctionTemplateCo
     storageConnection = this.options.storageConnection_appSettingName || 'AZURE_STORAGE_CONNECTION_STRING';
 
 
-    constructor(private options?: {
-        getVerifyUrl: (verificationToken: string) => string,
-        getCancelVerifyUrl: (verificationToken: string) => string,
+    constructor(private options: {
+        getUrl_resetPassword: (token: string) => string,
+        getUrl_cancelResetPassword: (token: string) => string,
         storageConnection_appSettingName?: string,
-        resetPasswordExpireTimeMs: number,
+        resetPasswordExpireTimeMs?: number,
     }) { }
 
     getBinding_http = (trigger: { sessionToken: string }): HttpBinding => {
@@ -50,8 +50,8 @@ export class AccountServerConfig implements ServerConfigType, FunctionTemplateCo
         };
     }
 
-    getResetPasswordUrl = this.options.getVerifyUrl;
-    getCancelResetPasswordUrl = this.options.getCancelVerifyUrl;
+    getUrl_resetPassword = this.options.getUrl_resetPassword;
+    getUrl_cancelResetPassword = this.options.getUrl_cancelResetPassword;
 
     // getBinding_UserTable = (trigger: { userId: string }): TableBinding => {
     //     return {
