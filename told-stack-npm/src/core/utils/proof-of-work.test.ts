@@ -20,10 +20,10 @@ function runTests() {
         }
 
         const start = perfNow();
-        const jsonPow = stringifyPow(testObj);
+        const jsonPow = stringifyPow(testObj, 'around10ms');
         const elapsed_stringify = perfNow() - start;
 
-        const actual = parsePow(jsonPow).data;
+        const actual = parsePow(jsonPow, 'around10ms').data;
         const elapsed_parse = perfNow() - start - elapsed_stringify;
 
         if (JSON.stringify(actual) !== JSON.stringify(testObj)) {

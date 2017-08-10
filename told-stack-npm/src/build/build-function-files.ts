@@ -2,8 +2,9 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 
 import { asyncNode_noError, asyncNode } from "../core/utils/async-node";
-import { EntryInfoResolved, EntryInfo } from "../core/types/entry";
+import { EntryInfoResolved, EntryInfo, isEntryInfoFunctionBase } from "../core/types/entry";
 import { joinImportPath } from "./join-import-path";
+import { generateFunctionJsonDoc } from "../core/azure-functions/function-base-generate";
 
 const deployDir = '_deploy';
 const intermediateDir = '_intermediate';
@@ -18,7 +19,7 @@ export async function buildFunctionJsonAndIndexFiles(options: {
     console.log('buildFunctionJsonAndIndexFiles START', { destDirFullPath });
 
     for (let x of entries) {
-        const functionJsonFile = JSON.stringify(x.import_required.createFunctionJson(x.configImport_required.config), null, ' ');
+        const functionJsonFile = generateFunctionJson(x);
         const functionIndexFile = getFunctionIndexFile()
 
         // Output to destDir
@@ -65,22 +66,50 @@ export async function buildFunctionRunFile(options: {
     console.log('buildFunctionRunFile END', { destDirFullPath });
 }
 
+function generateFunctionJson(x: EntryInfoResolved) {
+    if (isEntryInfoFunctionBase(x)) {
+        const def = new x.import_required.FunctionDefinition(x.configImport_required.configNamed);
+        return JSON.stringify(generateFunctionJsonDoc(def), null, ' ');
+    } else {
+        return JSON.stringify(x.import_required.createFunctionJson(x.configImport_required.configNamed), null, ' ');
+    }
+}
+
 function getRunFunctionFile(entry: EntryInfo, configPath: string) {
     const importPath = joinImportPath(configPath, entry.import);
     const configImportPath = joinImportPath(configPath, entry.configImport);
+    const configName = entry.configName || 'config';
 
-    return `
-import { runFunction } from '${importPath}';
-import { config } from '${configImportPath}';
+    if (entry.type === 'function-base') {
+        return `
+import { Function } from '${importPath}';
+import { ${configName} } from '${configImportPath}';
 
 const run = function (...args: any[]) {
-    runFunction.apply(null, [config, ...args]);
+    const f = new Function(${configName});
+    f.run.apply(f, [...args]);
 };
 
 declare const global: any;
+declare const module: any;
 global.__run = run;
 module.exports = global.__run;
 `;
+    } else {
+        return `
+import { runFunction } from '${importPath}';
+import { ${configName} } from '${configImportPath}';
+
+const run = function (...args: any[]) {
+    runFunction.apply(null, [${configName}, ...args]);
+};
+
+declare const global: any;
+declare const module: any;
+global.__run = run;
+module.exports = global.__run;
+`;
+    }
 
 }
 

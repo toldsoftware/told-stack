@@ -37,11 +37,11 @@ export const can_use_email_alias = createTest<TestConfig>((testConfig) => ({
         // Login with Email
         const l = await accountManager.login({ kind: UserAliasKind.email, value: email });
         testContext.assert('Is Correct User Id', l.userId, sessionInfo.userId);
-        testContext.assert('Is NOT Same Session Token', l.sessionToken, sessionInfo.sessionToken);
+        testContext.assert('Is NOT Same Session Token', l.sessionToken !== sessionInfo.sessionToken);
     }
 }));
 
-export const can_send_email_reset_password = createTest<TestConfig>((testConfig) => ({
+export const can_only_send_email_reset_password = createTest<TestConfig>((testConfig) => ({
     name: `A User Alias Can Only Send Email to Reset Password`,
     run: async (testContext) => {
         const accountManager = new AccountManager(testConfig.serverConfig, testConfig.emailProvider);

@@ -12,7 +12,7 @@ import {
 import {
     can_add_email_alias,
     can_use_email_alias,
-    can_send_email_reset_password,
+    can_only_send_email_reset_password,
 } from "./tests_002_existing_user";
 
 export const tests = [
@@ -21,7 +21,7 @@ export const tests = [
     (testContext: TestContext) => new_user_with_session_lookup_permissions(testContext, new TestConfig()),
     (testContext: TestContext) => can_add_email_alias(testContext, new TestConfig()),
     (testContext: TestContext) => can_use_email_alias(testContext, new TestConfig()),
-    (testContext: TestContext) => can_send_email_reset_password(testContext, new TestConfig()),
+    (testContext: TestContext) => can_only_send_email_reset_password(testContext, new TestConfig()),
 ];
 
 export const runTests = async () => {

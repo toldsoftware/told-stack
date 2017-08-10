@@ -36,7 +36,7 @@ function buildFunction(config: FunctionTemplateConfig) {
 export const createFunctionJson = (config: FunctionTemplateConfig) => build_createFunctionJson(config, buildFunction);
 
 export const runFunction = build_runFunction_common(buildFunction, async (config: ServerConfigType, context) => {
-    const authenticator = new SessionAuthenticator(context);
+    const authenticator = new SessionAuthenticator(context.bindings.inSessionTable);
     const emailProvider = new EmailProvider(config.emailConfig);
     const accountManager = new AccountManager(config.accountConfig, emailProvider);
 

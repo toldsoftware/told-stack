@@ -4,6 +4,8 @@
   ],
   "compilerOptions": {
     // "declaration": true,
+    "jsx": "react",
+    "reactNamespace": "RX",
     "noResolve": false,
     "module": "commonjs",
     "target": "es2015",

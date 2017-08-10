@@ -42,6 +42,7 @@ export function createCheckoutSubmitRequest(clientCheckoutId: string, testCode: 
             sessionInfo: {
                 sessionToken: `userToken1234_${Date.now()}`,
                 userId_claimed: `userToken1234_${Date.now()}`,
+                accountPermissions_claimed: [],
                 isAnonymous: true
             },
 

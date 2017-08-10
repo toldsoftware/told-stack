@@ -2,8 +2,6 @@ import { build_createFunctionJson, buildFunction_common, build_binding, build_ru
 import { FunctionTemplateConfig, ServerConfigType, LogQueue, logQueueTrigger } from "../config/server-config";
 import { insertOrMergeTableEntity_sdk } from "../../../core/utils/azure-storage-binding/tables-sdk";
 import { LogItem } from "../config/types";
-import { randHex } from "../../utils/rand";
-import { leftPad } from "../../utils/left-pad";
 
 function buildFunction(config: FunctionTemplateConfig) {
     return buildFunction_common(logQueueTrigger)

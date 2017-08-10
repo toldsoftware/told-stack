@@ -4,6 +4,7 @@ import { TestConfig } from "../../config/test-config";
 import { ClientConfig } from "../../config/client-config";
 import { ServerConfig } from "../../config/server-config";
 import { AccountServerConfig } from "../../../../core/account/config/server-config";
+import { EmailProviderConfig } from "../../../../core/providers/email-provider";
 
 // TODO: Modify CreateRequest to use this
 // TODO: Use this for samples/demo config for deploy
@@ -28,16 +29,24 @@ export const clientConfig = new ClientConfig({
     getSessionInfo: async () => ({
         sessionToken: 'userToken42',
         userId_claimed: '',
+        accountPermissions_claimed: [],
         isAnonymous: true,
     }),
 });
 
 // Used by the Demo Config for server testing
-export const accountConfig = new AccountServerConfig();
+export const accountConfig = new AccountServerConfig({
+    getUrl_resetPassword: () => '',
+    getUrl_cancelResetPassword: () => '',
+});
+
+export const emailConfig: EmailProviderConfig = {
+
+};
 
 export const serverConfig = new ServerConfig(clientConfig, {
-    executeRequest: async () => { },
-}, accountConfig);
+    executeRequest: async () => ({}),
+}, accountConfig, emailConfig);
 
 export const userDebugCodes = {
     newUser: 'new_user',
