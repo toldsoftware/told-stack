@@ -1,0 +1,140 @@
+import { build_createFunctionJson, FunctionJsonBuilder, build_runFunction_common, RuntimeTypesBuilder_Common, buildFunction_common, build_binding } from "./function-builder";
+import { QueueBinding, TableBinding, HttpFunctionRequest, HttpFunctionResponse } from "../types/functions";
+
+// API
+type Binding2<T> = T & {
+    __definition?: string;
+}
+
+function createQueueBinding<T, TTrigger={}>(queueBinding: (t: TTrigger) => QueueBinding, t: TTrigger = null): Binding2<T> {
+    return queueBinding(t) as any as T;
+}
+
+function createTableBinding<T, TTrigger={}>(tableBinding: (t: TTrigger) => TableBinding, t: TTrigger = null): Binding2<T> {
+    return tableBinding(t) as any as T;
+}
+
+
+
+// ServerConfig
+export const emailVerficiationQueueTrigger = {
+    token: '',
+};
+
+interface EmailVerificationQueue {
+    dataA: string,
+    dataB: number,
+}
+interface EmailVerificationTable {
+    dataC: string,
+    dataD: number,
+}
+
+class ServerConfig {
+    connection = 'AZURE_STORAGE_CONNECTION_STRING';
+
+    getBinding_emailVerificationQueue = (): QueueBinding => {
+        return {
+            connection: this.connection,
+            queueName: 'email-verification',
+        };
+    }
+
+    getBinding_emailVerificationTable = (t: typeof emailVerficiationQueueTrigger): TableBinding => {
+        return {
+            connection: this.connection,
+            tableName: 'emailverification',
+            partitionKey: `${t.token}`,
+            rowKey: `verification`,
+        };
+    }
+
+    // Additional in Config (ties together type, binding, and trigger)
+    binding_emailVerificationQueue = createQueueBinding<EmailVerificationQueue>(this.getBinding_emailVerificationQueue);
+    binding_emailVerificationTable = createTableBinding<EmailVerificationTable>(this.getBinding_emailVerificationTable, emailVerficiationQueueTrigger)
+}
+
+
+
+// API Function Base
+type DoneVoid = { __type: 'DoneVoid' };
+
+type Context<TBindings, TBindingData={}> = {
+    log: typeof console.log,
+    done: (error?: any) => DoneVoid,
+    bindingData: TBindingData,
+    bindings: TBindings;
+};
+
+type Context_Http<TBindings, TResponseBody, TBindingData={}> = Context<TBindings, TBindingData> & {
+    res: HttpFunctionResponse<TResponseBody>;
+};
+
+type JsonString<T> = string & { __type: 'JsonString' };
+
+abstract class FunctionBase<TDefinition> {
+    constructor(definition: TDefinition) { }
+
+    buildRun(inner: (context: Context<TDefinition>) => Promise<DoneVoid>) {
+        return inner;
+    }
+
+    buildRun_http<TResponseBody, TRequestBody extends string = string, TBindingData={}, TQuery={}>(inner: (context: Context_Http<TDefinition, TResponseBody, TBindingData>, req: HttpFunctionRequest<TRequestBody, TQuery>) => Promise<DoneVoid>) {
+        return inner;
+    }
+
+    abstract run: (context: any, req: any) => Promise<DoneVoid>;
+}
+
+// Simplified Function Definition
+// ---
+
+class FunctionDefinition {
+    constructor(public config: ServerConfig) { }
+
+    inEmailVerificationQueueTrigger = this.config.binding_emailVerificationQueue;
+    outEmailVerificationTable = this.config.binding_emailVerificationTable;
+}
+
+class FunctionRuntime extends FunctionBase<FunctionDefinition>{
+    constructor(definition: FunctionDefinition) { super(definition); }
+
+    run = this.buildRun(async (context) => {
+        const d = context.bindings.inEmailVerificationQueueTrigger;
+        return context.done();
+    });
+}
+
+// ---
+
+
+class FunctionRuntime_B extends FunctionBase<FunctionDefinition>{
+    constructor(definition: FunctionDefinition) { super(definition); }
+
+    run = this.buildRun_http<{ a: string }, JsonString<{ b: string }>>(async (context, req) => {
+        const d = context.bindings.inEmailVerificationQueueTrigger;
+        context.res = {
+            body: { a: 'abc' }
+        };
+        return context.done();
+    });
+}
+
+// ---
+
+
+// Composition
+class FunctionDefinition_Extended {
+    constructor(public config: ServerConfig) { }
+
+    inEmailVerificationQueueTrigger = this.config.binding_emailVerificationQueue;
+    outEmailVerificationTable = this.config.binding_emailVerificationTable;
+}
+
+
+// TESTING Usage
+const d = new FunctionDefinition(new ServerConfig());
+d.inEmailVerificationQueueTrigger = {
+    dataA: '',
+    dataB: 0,
+};

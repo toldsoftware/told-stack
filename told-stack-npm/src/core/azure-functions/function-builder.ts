@@ -1,4 +1,4 @@
-import { HttpFunctionResponse, HttpFunctionRequest, QueueBinding, TableBinding, BlobBinding, AnyBinding } from '../types/functions';
+import { HttpFunctionResponse, HttpFunctionRequest, QueueBinding, TableBinding, BlobBinding, AnyBinding, SendGridBinding, SendGridMessage } from '../types/functions';
 
 export function createTrigger<T>(trigger: T): T {
     const t = { ...trigger as any };
@@ -169,4 +169,11 @@ export function buildFunction_common<TBindingData>(bindingData?: TBindingData) {
 
 export function build_binding<TBinding>(binding: AnyBinding): TBinding {
     return binding as any;
+}
+
+export function build_binding_sendGrid(binding: SendGridBinding): SendGridMessage {
+    return {
+        ...binding,
+        type: 'sendGrid',
+    } as any;
 }

@@ -1,0 +1,233 @@
+import { build_createFunctionJson, FunctionJsonBuilder, build_runFunction_common, RuntimeTypesBuilder_Common, buildFunction_common, build_binding } from "./function-builder";
+import { QueueBinding, TableBinding, HttpFunctionRequest, HttpFunctionResponse } from "../types/functions";
+
+// API
+type Binding2<T> = T & {
+    __definition?: string;
+}
+
+function createQueueBinding<T, TTrigger={}>(queueBinding: (t: TTrigger) => QueueBinding, t: TTrigger = null): Binding2<T> {
+    // TODO: convert t values to trigger values
+    return queueBinding(t) as any as T;
+}
+
+function createTableBinding<T, TTrigger={}>(tableBinding: (t: TTrigger) => TableBinding, t: TTrigger = null): Binding2<T> {
+    return tableBinding(t) as any as T;
+}
+
+
+
+// ServerConfig
+interface EmailVerificationQueue {
+    dataA: string,
+    dataB: number,
+}
+interface EmailVerificationTable {
+    dataC: string,
+    dataD: number,
+}
+
+class ServerConfig {
+    connection = 'AZURE_STORAGE_CONNECTION_STRING';
+
+    getBinding_emailVerificationQueue = (): QueueBinding => {
+        return {
+            connection: this.connection,
+            queueName: 'email-verification',
+        };
+    }
+
+    getBinding_emailVerificationTable = (t: { token: string }): TableBinding => {
+        return {
+            connection: this.connection,
+            tableName: 'emailverification',
+            partitionKey: `${t.token}`,
+            rowKey: `verification`,
+        };
+    }
+
+    // Additional in Config (ties together type, binding, and trigger)
+    binding_emailVerificationQueue = createQueueBinding<EmailVerificationQueue>(this.getBinding_emailVerificationQueue);
+    binding_emailVerificationTable = createTableBinding<EmailVerificationTable>(this.getBinding_emailVerificationTable, { token: '' })
+
+    getRuntimeValue = () => { return 'runVal'; }
+}
+
+// API Function Base
+type DoneVoid = { __type: 'DoneVoid' };
+
+type Context<TBindings, TBindingData={}> = {
+    log: typeof console.log,
+    done: (error?: any) => DoneVoid,
+    bindingData: TBindingData,
+    bindings: TBindings;
+};
+
+type Context_Http<TBindings, TResponseBody, TBindingData={}> = Context<TBindings, TBindingData> & {
+    res: HttpFunctionResponse<TResponseBody>;
+};
+
+type JsonString<T> = string & { __type: 'JsonString' };
+
+type Public<T> = {
+    [K in keyof T]: T[K];
+};
+
+class FunctionDefinitionBase {
+
+}
+
+class FunctionDefinitionBase_Http extends FunctionDefinitionBase {
+    constructor(private route: string) {
+        super();
+
+    }
+}
+
+abstract class FunctionBase<TDefinition extends FunctionDefinitionBase> {
+    // constructor(definition: TDefinition) { }
+
+    buildRun(inner: (context: Context<TDefinition>) => Promise<DoneVoid>) {
+        return inner;
+    }
+
+    buildRun_http<TResponseBody, TRequestBody extends string = string, TBindingData={}, TQuery={}>(inner: (context: Context_Http<TDefinition, TResponseBody, TBindingData>, req: HttpFunctionRequest<TRequestBody, TQuery>) => Promise<DoneVoid>) {
+        return inner;
+    }
+
+    abstract run: (context: any, req: any) => Promise<DoneVoid>;
+}
+
+abstract class FunctionExtension<TDefinition extends FunctionDefinitionBase> {
+    // constructor(definition: TDefinition) { }
+
+    buildMethod<TReturn, TArgs={}>(inner: (context: Context<Public<TDefinition>>, args: TArgs) => Promise<TReturn>) {
+        // return inner as ((context: Context<any, any>, args: TArgs) => Promise<TReturn>);
+        // return inner as ((context: Context<TDefinition>, args: TArgs) => Promise<TReturn>);
+        return inner;
+        // return inner as ((context: Context<TDefinition>, args: TArgs) => Promise<TReturn>);
+    }
+}
+
+// Simplified Function Definition
+// ---
+
+class FunctionDefinition {
+    constructor(private config: ServerConfig) { }
+
+    inEmailVerificationQueueTrigger = this.config.binding_emailVerificationQueue;
+    outEmailVerificationTable = this.config.binding_emailVerificationTable;
+}
+
+class FunctionRuntime extends FunctionBase<FunctionDefinition>{
+    //constructor(definition: FunctionDefinition) { super(definition); }
+    constructor(config: ServerConfig) { super(); }
+
+    run = this.buildRun(async (context) => {
+        const d = context.bindings.inEmailVerificationQueueTrigger;
+        return context.done();
+    });
+}
+
+// ---
+
+
+class FunctionRuntime_Http extends FunctionBase<FunctionDefinition>{
+    // constructor(definition: FunctionDefinition) { super(definition); }
+    constructor(config: ServerConfig) { super(); }
+
+    run = this.buildRun_http<{ a: string }, JsonString<{ b: string }>>(async (context, req) => {
+        const d = context.bindings.inEmailVerificationQueueTrigger;
+        context.res = {
+            body: { a: 'abc' }
+        };
+        return context.done();
+    });
+}
+
+// ---
+
+
+// Composition
+
+// Extension
+class FunctionDefinition_Ext {
+    constructor(private config: ServerConfig) { }
+
+    outAQueue = this.config.binding_emailVerificationQueue;
+    outBTable = this.config.binding_emailVerificationTable;
+}
+
+class FunctionRuntime_Ext extends FunctionExtension<FunctionDefinition_Ext>{
+    constructor(private config: ServerConfig) { super(); }
+    // constructor(definition: FunctionDefinition_Ext) { super(definition); }
+
+    doSomething = this.buildMethod(async (context, args: { var1: string }) => {
+        const r = this.config.getRuntimeValue();
+
+        context.bindings.outBTable = {
+            dataC: 'abc',
+            dataD: 123,
+        };
+
+        return 'abc123';
+    });
+}
+
+// Extended
+class ServerConfigB {
+
+    constructor(public configA: ServerConfig) { }
+
+    // Additional in Config (ties together type, binding, and trigger)
+    binding_CQueueTrigger = createQueueBinding<EmailVerificationQueue>(this.configA.getBinding_emailVerificationQueue);
+    binding_DTable = createTableBinding<EmailVerificationTable>(this.configA.getBinding_emailVerificationTable, emailVerficiationQueueTrigger)
+
+    getRuntimeValueB = () => { return 'runVal'; }
+}
+
+// Inheritence is shorter if only one extension
+class FunctionDefinition_Extended_InheritanceWorks extends FunctionDefinition_Ext {
+    constructor(private configB: ServerConfigB) { super(configB.configA) }
+
+    inCQueueTrigger = this.configB.binding_CQueueTrigger;
+    outDTable = this.configB.binding_DTable;
+}
+
+// Composition allows multiple extensions
+class FunctionDefinition_Extended {
+    constructor(private config: ServerConfigB) { }
+
+    private _ext = new FunctionDefinition_Ext(this.config.configA);
+    outAQueue = this._ext.outAQueue;
+    outBTable = this._ext.outBTable;
+
+    inCQueueTrigger = this.config.binding_CQueueTrigger;
+    outDTable = this.config.binding_DTable;
+}
+
+class FunctionRuntime_Extended extends FunctionBase<FunctionDefinition_Extended>{
+    constructor(private config: ServerConfigB) { super(); }
+    // constructor(definition: FunctionDefinition_Extended) { super(definition); }
+
+    private _ext = new FunctionRuntime_Ext(this.config.configA);
+
+    run = this.buildRun_http<{ a: string }, JsonString<{ b: string }>>(async (context, req) => {
+        const c = context.bindings.inCQueueTrigger;
+
+        await this._ext.doSomething(context, { var1: 'abc123' });
+
+        context.res = {
+            body: { a: 'abc' }
+        };
+        return context.done();
+    });
+}
+
+
+// TESTING Usage
+const d = new FunctionDefinition(new ServerConfig());
+d.inEmailVerificationQueueTrigger = {
+    dataA: '',
+    dataB: 0,
+};

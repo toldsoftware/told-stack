@@ -1,0 +1,80 @@
+import { build_createFunctionJson, FunctionJsonBuilder, build_runFunction_common, RuntimeTypesBuilder_Common, buildFunction_common, build_binding } from "./function-builder";
+import { QueueBinding, TableBinding } from "../types/functions";
+
+export class FunctionBase<TConfig, TContext, TDefinition extends FunctionJsonBuilder & RuntimeTypesBuilder_Common<TContext>> {
+    constructor(
+        private buildFunctionDefinition: (config: TConfig) => TDefinition,
+        private runFunctionInner: (config: TConfig, context: TContext) => void | Promise<void>,
+    ) {
+
+    }
+
+    createFunctionJson = (config: TConfig) => build_createFunctionJson(config, this.buildFunctionDefinition);
+    runFunction = build_runFunction_common(this.buildFunctionDefinition, this.runFunctionInner);
+
+}
+
+export function defineFunction<TConfig, TDefinition>(
+    buildFunctionDefinition: (config: TConfig) => TDefinition,
+) {
+    return {
+        buildFunctionDefinition,
+        create: <TContext>(
+            cf: (config: any) => FunctionJsonBuilder & RuntimeTypesBuilder_Common<TContext>,
+            runFunctionInner: (config: TConfig, context: TContext) => void | Promise<void>
+        ) => {
+            // const runFunction = build_runFunction_common(cf, runFunctionInner);
+            return new FunctionBase(buildFunctionDefinition as any as typeof cf, runFunctionInner);
+        },
+    }
+}
+
+// return {
+//     create: (t: TContext, runFunctionInner: (config: TConfig, context: TContext) => Promise<void>) => {
+//         return build_runFunction_common(buildFunctionDefinition, runFunctionInner)
+//     },
+// };
+//}
+
+
+// export function defineFunction<TConfig, TDefinition extends FunctionJsonBuilder & RuntimeTypesBuilder_Common<TContext>, TContext>(
+//     buildFunctionDefinition: (config: TConfig) => TDefinition,
+// ) {
+//     const t = buildFunctionDefinition(null as TConfig).build_runtimeTypes().context;
+//     return {
+//         t,
+//         context: (context: TContext) => {
+//             return {
+//                 create: (runFunctionInner: (config: TConfig, context: TContext) => Promise<void>) => {
+//                     return (runFunctionInner: (config: TConfig, context: TContext) => Promise<void>) =>
+//                         new FunctionBase(buildFunctionDefinition, runFunctionInner);
+//                 }
+//             };
+//         },
+//     }
+// }
+
+// Test
+class ServerConfig {
+    getBinding_emailVerificationQueue: () => QueueBinding = null;
+    getBinding_emailVerificationTable: (t: any) => TableBinding = null;
+}
+
+const emailVerficiationQueueTrigger = {
+    a: '',
+};
+
+interface EmailVerificationQueue { }
+interface EmailVerificationTable { }
+
+const testFunDef = defineFunction((config: ServerConfig) => {
+    return buildFunction_common(emailVerficiationQueueTrigger)
+        .bindings(t => ({
+            inEmailVerificationQueueTrigger: build_binding<EmailVerificationQueue>(config.getBinding_emailVerificationQueue()),
+            outEmailVerificationTable: build_binding<EmailVerificationTable>(config.getBinding_emailVerificationTable(t)),
+        }));
+});
+
+const testFunBase = testFunDef.create(testFunDef.buildFunctionDefinition, (config, context) => {
+    const d = context.bindings.inEmailVerificationQueueTrigger;
+})
