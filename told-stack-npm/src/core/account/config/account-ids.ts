@@ -1,38 +1,37 @@
 import { randHex, randWord } from "../../utils/rand";
+import { createSecureToken } from "../../utils/secure-token";
 
 export function createSessonToken_client() {
     const iso = (new Date()).toISOString();
-    const p = performance.now();
-    const rand = randHex(16);
+    const t = createSecureToken();
     const w = randWord();
-    return `sc_${iso}_${w}_${p}_${rand}`;
+    return `sc_${iso}_${w}_${t}`;
 }
 
 export function createUserId_anonymous_client() {
     const iso = (new Date()).toISOString();
-    const p = performance.now();
-    const rand = randHex(16);
+    const t = createSecureToken();
     const w = randWord();
-    return `uc_anon_${iso}_${w}_${p}_${rand}`;
+    return `uc_anon_${iso}_${w}_${t}`;
 }
 
 export function createSessonToken_server() {
     const iso = (new Date()).toISOString();
-    const rand = randHex(32);
+    const t = createSecureToken();
     const w = randWord();
-    return `ss_${iso}_${w}_${rand}`;
+    return `ss_${iso}_${w}_${t}`;
 }
 
 export function createUserId_server() {
     const iso = (new Date()).toISOString();
-    const rand = randHex(32);
+    const t = createSecureToken();
     const w = randWord();
-    return `us_${iso}_${w}_${rand}`;
+    return `us_${iso}_${w}_${t}`;
 }
 
 export function createEvidenceToken() {
     const now = Date.now();
-    const rand = randHex(64);
+    const t = createSecureToken();
     const w = randWord();
-    return `e_${now}_${w}_${rand}`;
+    return `e_${now}_${w}_${t}`;
 }

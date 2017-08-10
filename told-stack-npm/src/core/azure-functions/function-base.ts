@@ -1,4 +1,4 @@
-import { QueueBinding, TableBinding, HttpFunctionResponse, HttpFunctionRequest, Binding, BindingFull, bindingNameToType, HttpBinding } from "../types/functions";
+import { QueueBinding, TableBinding, HttpFunctionResponse, HttpFunctionRequest, Binding, BindingFull, bindingNameToType, HttpBinding, SendGridBinding, SendGridMessage } from "./types";
 
 // Context Types
 export type DoneVoid = { __type: 'DoneVoid' };
@@ -35,11 +35,11 @@ export class FunctionDefinitionBase_Http {
 export type FunctionBaseConstructor = new (config: any) => FunctionBaseUntyped;
 
 abstract class FunctionBaseUntyped {
-    abstract run: (context: any, req: any) => Promise<DoneVoid>;
+    abstract run: (context: any, req: any) => DoneVoid | Promise<DoneVoid>;
 }
 
 export abstract class FunctionBase<TDefinition extends FunctionDefinitionBase> extends FunctionBaseUntyped {
-    buildRun(inner: (context: Context<TDefinition>) => Promise<DoneVoid>) {
+    buildRun(inner: (context: Context<TDefinition>) => DoneVoid | Promise<DoneVoid>) {
         return inner;
     }
 }
@@ -48,7 +48,7 @@ export abstract class FunctionBase_Http<TDefinition extends FunctionDefinitionBa
     buildRun<TResponseBody, TRequestBody extends string = string, TBindingData={}, TQuery={}>(inner: (
         context: Context_Http<TDefinition, TResponseBody, TBindingData>,
         req: HttpFunctionRequest<TRequestBody, TQuery>
-    ) => Promise<DoneVoid>) {
+    ) => DoneVoid | Promise<DoneVoid>) {
         return inner;
     }
 }
@@ -84,5 +84,11 @@ export function createTableBinding<T, TTrigger={}>(tableBinding: (trigger: TTrig
     const t = createTrigger(trigger);
     return {
         __definition: tableBinding(t)
+    } as BindingInstanceBase<{}> as any;
+}
+
+export function createSendGridBinding(sendGridBinding: () => SendGridBinding): BindingInstanceBase<SendGridMessage> {
+    return {
+        __definition: sendGridBinding()
     } as BindingInstanceBase<{}> as any;
 }

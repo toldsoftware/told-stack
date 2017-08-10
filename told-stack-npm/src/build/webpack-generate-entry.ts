@@ -1,4 +1,4 @@
-import { EntryInfo } from "../core/types/entry";
+import { EntryInfo } from "./entry";
 
 export function webpack_generateEntry(rootDirName: string,
     entries: EntryInfo[], destDir = '_deploy', intermediateDir = '_intermediate',

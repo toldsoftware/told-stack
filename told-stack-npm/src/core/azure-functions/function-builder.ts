@@ -1,4 +1,4 @@
-import { HttpFunctionResponse, HttpFunctionRequest, QueueBinding, TableBinding, BlobBinding, AnyBinding, SendGridBinding, SendGridMessage } from '../types/functions';
+import { HttpFunctionResponse, HttpFunctionRequest, QueueBinding, TableBinding, BlobBinding, AnyBinding, SendGridBinding, SendGridMessage } from './types';
 
 export function createTrigger<T>(trigger: T): T {
     const t = { ...trigger as any };

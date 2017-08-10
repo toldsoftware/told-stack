@@ -1,6 +1,7 @@
 import { TableBinding, HttpBinding } from "../../types/functions";
 import { createTableBinding } from "../../azure-functions/function-base";
 import { SessionTable, AccountTable } from "./types";
+import { ServerConfig as EmailServerConfig } from "../../email/config/server-config";
 
 export interface FunctionTemplateConfig {
     getBinding_http: (trigger: { sessionToken: string }) => HttpBinding;
@@ -17,16 +18,14 @@ export interface ServerConfigType {
 
 export class AccountServerConfig implements ServerConfigType, FunctionTemplateConfig {
 
-    resetPasswordExpireTimeMs = this.options.resetPasswordExpireTimeMs || 24 * 60 * 60 * 1000;
+    emailTokenExpireTimeMs = this.options.emailTokenExpireTimeMs || 10 * 60 * 1000;
     storageConnection = this.options.storageConnection_appSettingName || 'AZURE_STORAGE_CONNECTION_STRING';
 
 
     constructor(private options: {
-        getUrl_resetPassword: (token: string) => string,
-        getUrl_cancelResetPassword: (token: string) => string,
         storageConnection_appSettingName?: string,
-        resetPasswordExpireTimeMs?: number,
-    }) { }
+        emailTokenExpireTimeMs?: number,
+    }, public emailServerConfig: EmailServerConfig) { }
 
     getBinding_http = (trigger: { sessionToken: string }): HttpBinding => {
         return {
@@ -42,7 +41,7 @@ export class AccountServerConfig implements ServerConfigType, FunctionTemplateCo
             connection: this.storageConnection
         };
     }
-    binding_sessionTable_out = createTableBinding<SessionTable|SessionTable[]>(this.getBinding_SessionTable_out);
+    binding_sessionTable_out = createTableBinding<SessionTable[]>(this.getBinding_SessionTable_out);
 
 
     getBinding_SessionTable_fromSessionToken = (trigger: { sessionToken: string }): TableBinding => {
@@ -63,18 +62,4 @@ export class AccountServerConfig implements ServerConfigType, FunctionTemplateCo
             rowKey: undefined,
         };
     }
-    binding_accountTable_out = createTableBinding<AccountTable|AccountTable[]>(this.getBinding_AccountTable);
-    
-
-    getUrl_resetPassword = this.options.getUrl_resetPassword;
-    getUrl_cancelResetPassword = this.options.getUrl_cancelResetPassword;
-
-    // getBinding_UserTable = (trigger: { userId: string }): TableBinding => {
-    //     return {
-    //         tableName: 'account',
-    //         partitionKey: `${trigger.userId}`,
-    //         rowKey: `user-session`,
-    //         connection: this.storageConnection
-    //     };
-    // }
 }

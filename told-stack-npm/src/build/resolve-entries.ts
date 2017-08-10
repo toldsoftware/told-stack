@@ -1,4 +1,4 @@
-import { EntryInfo, EntryInfoResolved } from "../core/types/entry";
+import { EntryInfo, EntryInfoResolved } from "./entry";
 import { joinImportPath } from "./join-import-path";
 
 export function resolveEntries(entries: EntryInfo[], requireCallback: (importPath: string) => any): EntryInfoResolved[] {

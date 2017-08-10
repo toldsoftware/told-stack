@@ -82,6 +82,7 @@ export enum UserAliasKind {
 
 export enum UserEvidenceKind {
     password = 'password',
+    token_verifyEmail = 'token_verifyEmail',
     token_resetPassword = 'token_resetPassword',
 }
 
@@ -97,6 +98,11 @@ export type UserAlias =
 
 export type UserEvidence =
     {
+        kind: UserEvidenceKind.token_verifyEmail;
+        verificationToken: string;
+        expireTime: number;
+        maxUsages: 1;
+    } |  {
         kind: UserEvidenceKind.token_resetPassword;
         resetPasswordToken: string;
         expireTime: number;

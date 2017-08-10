@@ -1,5 +1,5 @@
 import { FunctionDefinitionBase, HTTP_BINDING, BindingInstanceBase } from "./function-base";
-import { BindingFull, HttpBinding, bindingNameToType } from "../types/functions";
+import { BindingFull, HttpBinding, bindingNameToType } from "./types";
 
 export function generateFunctionJsonDoc(definition: FunctionDefinitionBase) {
     const doc: BindingFull[] = [];

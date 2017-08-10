@@ -2,7 +2,7 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 
 import { asyncNode_noError, asyncNode } from "../core/utils/async-node";
-import { EntryInfoResolved, EntryInfo, isEntryInfoFunctionBase } from "../core/types/entry";
+import { EntryInfoResolved, EntryInfo, isEntryInfoFunctionBase } from "./entry";
 import { joinImportPath } from "./join-import-path";
 import { generateFunctionJsonDoc } from "../core/azure-functions/function-base-generate";
 

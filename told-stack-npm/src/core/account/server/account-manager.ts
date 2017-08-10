@@ -1,5 +1,5 @@
-import { AccountTable, SessionInfo_Client, UserAlias, SessionInfo, AccountPermission, UserEvidence, UserAliasKind, UserEvidenceKind, getAccountPermissions_userEvidenceKind, getAccountPermissions_userAlias } from "../config/types";
-import { TableBinding } from "../../types/functions";
+import { AccountTable, SessionInfo_Client, UserAlias, SessionInfo, AccountPermission, UserEvidence, UserAliasKind, UserEvidenceKind, getAccountPermissions_userEvidenceKind, getAccountPermissions_userAlias, verifyUserPermission } from "../config/types";
+import { TableBinding, EmailMessage } from "../../types/functions";
 import { createSessonToken_server, createUserId_server, createEvidenceToken } from "../config/account-ids";
 import { encodeTableKey } from "../../utils/encode-key";
 import { saveTableEntities_merge, loadTableEntity, findTableEntities } from "../../utils/azure-storage-binding/tables-sdk";
@@ -18,8 +18,12 @@ export function encodeEvidence(kind: UserEvidenceKind, evidence: string) {
     return encodeURIComponent(`evidence-${kind}-${evidence}`);
 }
 
+export interface EmailSender {
+    sendEmail(message: EmailMessage): Promise<void>;
+}
+
 export class AccountManager {
-    constructor(public config: AccountServerConfig, private sessionManager: Public<SessionManager>) { }
+    constructor(public config: AccountServerConfig, private sessionManager: Public<SessionManager>, private emailSender: EmailSender) { }
 
     private async verifyUserExists(userId: string) {
         if (!this.doesUserExist(userId)) {
@@ -72,7 +76,7 @@ export class AccountManager {
             });
     }
 
-    public async storeUserEvidence(userId: string, evidence: string, data: UserEvidence, options = { shouldDisableOtherEvidenceOfSameKind: true }) {
+    public async storeUserEvidence(userId: string, evidence: string, data: UserEvidence, sessionToken_request: string, options = { shouldDisableOtherEvidenceOfSameKind: true }) {
         this.verifyUserExists(userId);
 
         const accountTableBinding = this.config.getBinding_AccountTable();
@@ -90,6 +94,7 @@ export class AccountManager {
                 userId: userId,
                 userEvidence: data,
                 usageCount: 0,
+                sessionToken_request
             });
     }
 
@@ -173,29 +178,38 @@ export class AccountManager {
     //     });
     // }
 
-    // Verified Externally
-    // TODO: Use User Evidence for Email Verification (Create User Account upon send Verification Email)
-    async verifyEmail(userId: string, email: string, oldSessionToken?: string, options = { shouldCreateSession: true }) {
-        await this.storeUserAlias(userId, email, {
-            kind: UserAliasKind.email,
-            email,
-            isVerified: true,
-        });
+    // // Verified Externally
+    // // TODO: Use User Evidence for Email Verification (Create User Account upon send Verification Email)
+    // async verifyEmail(userId: string, email: string, oldSessionToken?: string, options = { shouldCreateSession: true }) {
+    //     await this.storeUserAlias(userId, email, {
+    //         kind: UserAliasKind.email,
+    //         email,
+    //         isVerified: true,
+    //     });
 
-        const accountPermissions = [AccountPermission.SetCredentials];
-        const userAuthorizations = unique_values<string>([]);
-        if (!options.shouldCreateSession) {
-            return await this.sessionManager.createNewSession(userId, accountPermissions, userAuthorizations, oldSessionToken);
-        }
-        else{
-            return null;
-        }
-    }
+    //     const accountPermissions = [AccountPermission.SetCredentials];
+    //     const userAuthorizations = unique_values<string>([]);
+    //     if (!options.shouldCreateSession) {
+    //         return await this.sessionManager.createNewSession(userId, accountPermissions, userAuthorizations, oldSessionToken);
+    //     }
+    //     else {
+    //         return null;
+    //     }
+    // }
 
     async login(alias: { value: string, kind: UserAliasKind }, evidence?: { value: string, kind: UserEvidenceKind }, oldSessionToken?: string) {
         const aliasEntity = await this.lookupUserAliasEntity(alias.kind, alias.value, { shouldIncrementUsage: true, shouldIgnoreDisabled: false });
+        if (!aliasEntity) {
+            return null;
+        }
+
         const userId = aliasEntity.userId;
         const evidenceEntity = evidence && await this.lookupUserEvidenceEntity(userId, evidence.kind, evidence.value, { shouldIncrementUsage: true });
+
+        if (evidence && !evidenceEntity) {
+            return null;
+        }
+
         const accountPermissions = unique_values([
             ...getAccountPermissions_userAlias(aliasEntity.userAlias),
             ...evidenceEntity && getAccountPermissions_userEvidenceKind(evidenceEntity.userEvidence.kind) || [],
@@ -205,5 +219,36 @@ export class AccountManager {
         const userAuthorizations = unique_values<string>([]);
 
         return await this.sessionManager.createNewSession(userId, accountPermissions, userAuthorizations, oldSessionToken);
+    }
+
+    // Emails
+    async sendEmailVerification_createUserIfNone(sessionToken_request: string, email: string, generateMessage: (verificationToken: string) => EmailMessage) {
+        const verificationToken = createEvidenceToken();
+        const expireTime = Date.now() + this.config.emailTokenExpireTimeMs;
+
+        // TODO: Throttle the email and session
+
+        const user = await this.lookupUserAliasEntity(UserAliasKind.email, email, { shouldIgnoreDisabled: true, shouldIncrementUsage: false });
+        let userId = user && user.userId;
+
+        if (!userId) {
+            const s = await this.createNewUser(sessionToken_request);
+            userId = s.userId;
+            sessionToken_request = s.sessionToken;
+        }
+
+        await this.storeUserEvidence(userId, verificationToken, {
+            kind: UserEvidenceKind.token_verifyEmail,
+            verificationToken,
+            expireTime,
+            maxUsages: 1,
+        }, sessionToken_request, { shouldDisableOtherEvidenceOfSameKind: true });
+
+        const message = generateMessage(verificationToken);
+        await this.emailSender.sendEmail(message);
+    }
+
+    async verifyEmail(sessionToken_request: string, email: string, verificationToken: string) {
+        return await this.login({ kind: UserAliasKind.email, value: email }, { kind: UserEvidenceKind.token_verifyEmail, value: verificationToken }, sessionToken_request);
     }
 }

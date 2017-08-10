@@ -11,13 +11,15 @@ const isValidSolution_versions = {
 type IsValidSolution = (hashCode: number, pow: number, now: number) => boolean;
 type PowVersion = keyof typeof isValidSolution_versions;
 
+export type PowString<T> = string & { __type: 'PowString' };
+
 interface ProofOfWorkJson {
     json: string;
     pow: string;
     now: string;
 }
 
-export function stringifyPow(data: any, version: PowVersion = 'around10ms'): string {
+export function stringifyPow<T>(data: T, version: PowVersion = 'around10ms'): PowString<T> {
     const isValidSolution = isValidSolution_versions[version];
 
     const json = JSON.stringify(data);
@@ -28,10 +30,10 @@ export function stringifyPow(data: any, version: PowVersion = 'around10ms'): str
         pow,
         now: '' + now,
     };
-    return JSON.stringify(powObj);
+    return JSON.stringify(powObj) as PowString<T>;
 }
 
-export function parsePow<T>(jsonPow: string, version: PowVersion = 'around10ms'): {
+export function parsePow<T>(jsonPow: PowString<T>, version: PowVersion = 'around10ms'): {
     data: T,
     data_ignoreVerificationError?: T,
     error?: string

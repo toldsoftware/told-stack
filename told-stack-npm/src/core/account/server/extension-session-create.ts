@@ -32,18 +32,20 @@ export class Function extends FunctionExtension<FunctionDefinition>{
         };
 
         const newSessionTableBinding = this.config.getBinding_SessionTable_fromSessionToken({ sessionToken });
-        context.bindings.outSessionTable = [{
+
+        const outSessionTable = context.bindings.outSessionTable = context.bindings.outSessionTable || [];
+        outSessionTable.push({
             PartitionKey: newSessionTableBinding.partitionKey,
             RowKey: newSessionTableBinding.rowKey,
             fromSessionToken: oldSessionToken,
             ...sessionInfo
         }, {
-            // User Sessions List
-            PartitionKey: userId,
-            RowKey: sessionToken,
-            fromSessionToken: oldSessionToken,
-            ...sessionInfo
-        }];
+                // User Sessions List
+                PartitionKey: userId,
+                RowKey: sessionToken,
+                fromSessionToken: oldSessionToken,
+                ...sessionInfo
+            });
 
         return sessionInfo;
     });

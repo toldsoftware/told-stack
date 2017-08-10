@@ -1,5 +1,5 @@
 import { buildFunctionJsonAndIndexFiles } from "./build-function-files";
-import { EntryInfoResolved } from "../core/types/entry";
+import { EntryInfoResolved } from "./entry";
 import { cloneDirectory } from "./clone-directory";
 
 export async function runPostBuild(entriesRequired: EntryInfoResolved[], functionsDestDir = '_deploy', functionsDestDir_testing = '') {
