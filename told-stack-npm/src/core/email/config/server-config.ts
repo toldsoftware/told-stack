@@ -1,5 +1,5 @@
 import { createTableBinding, createQueueBinding, createSendGridBinding } from "../../azure-functions/function-base";
-import { EmailMessage } from "../../types/functions";
+import { EmailMessage } from "./types";
 
 export interface EmailQueue {
     message: EmailMessage;
@@ -9,6 +9,7 @@ export interface EmailTable {
     to: string;
     from: string;
     subject: string;
+    plainContent: string;
     message: EmailMessage;
 }
 
@@ -31,7 +32,7 @@ export class ServerConfig {
         queueName: 'email',
     }));
 
-    binding_emailTable_out = createTableBinding<EmailTable>(() => ({
+    binding_emailTable_out = createTableBinding<EmailTable & { PartitionKey: string, RowKey: string }>(() => ({
         connection: this.storageConnection,
         tableName: 'email',
         partitionKey: undefined,

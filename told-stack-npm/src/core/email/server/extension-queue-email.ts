@@ -1,6 +1,6 @@
 import { FunctionDefinitionBase, FunctionExtension } from "../../azure-functions/function-base";
 import { ServerConfig, EmailQueue } from "../config/server-config";
-import { EmailMessage } from "../../types/functions";
+import { EmailMessage } from "../config/types";
 
 export class FunctionDefinition extends FunctionDefinitionBase {
     constructor(private config: ServerConfig) {

@@ -63,6 +63,22 @@ export interface SendGridBinding {
     apiKey: string,
 }
 
+// https://sendgrid.com/docs/API_Reference/Web_API_v3/Mail/index.html
+export interface SendGridMessage {
+    from: { email: string, name?: string },
+    content: ({
+        type: 'text/plain',
+        value: string,
+    } | {
+            type: 'text/html',
+            value: string,
+        })[],
+    personalizations: {
+        to: { email: string, name?: string }[],
+        subject: string,
+    }[];
+}
+
 export type Binding = HttpBinding | QueueBinding | TableBinding | BlobBinding | SendGridBinding;
 export type BindingType = 'httpTrigger' | 'http' | 'queueTrigger' | 'queue' | 'tableTrigger' | 'table' | 'blobTrigger' | 'blob' | 'sendGrid';
 export type BindingFull = (Binding & {
@@ -102,37 +118,6 @@ export function bindingNameToType(name: string): BindingType {
     }
 
     throw 'Unknown BindingName:' + name;
-}
-
-// https://sendgrid.com/docs/API_Reference/Web_API_v3/Mail/index.html
-export interface SendGridMessage {
-    from: { email: string, name?: string },
-    content: ({
-        type: 'text/plain',
-        value: string,
-    } | {
-            type: 'text/html',
-            value: string,
-        })[],
-    personalizations: {
-        to: { email: string, name?: string }[],
-        subject: string,
-    }[];
-}
-
-export interface EmailMessage {
-    from: { email: string, name?: string },
-
-    to: { email: string, name?: string },
-    subject: string,
-
-    content: ({
-        type: 'text/plain',
-        value: string,
-    } | {
-            type: 'text/html',
-            value: string,
-        })[],
 }
 
 export type AnyBinding = QueueBinding | TableBinding | BlobBinding;

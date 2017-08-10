@@ -31,6 +31,6 @@ export class Function extends FunctionExtension<FunctionDefinition>{
             createNewSession: async (a, b, c, d) => this._sessionCreate.createNewSession(context)(a, b, c, d)
         }, {
                 sendEmail: async (message) => this._email.sendEmail(context)(message),
-            });
+            }, context);
     });
 }
