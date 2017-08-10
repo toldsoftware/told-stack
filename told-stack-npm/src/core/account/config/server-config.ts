@@ -1,4 +1,6 @@
 import { TableBinding, HttpBinding } from "../../types/functions";
+import { createTableBinding } from "../../azure-functions/function-base";
+import { SessionTable, AccountTable } from "./types";
 
 export interface FunctionTemplateConfig {
     getBinding_http: (trigger: { sessionToken: string }) => HttpBinding;
@@ -32,6 +34,17 @@ export class AccountServerConfig implements ServerConfigType, FunctionTemplateCo
         };
     }
 
+    getBinding_SessionTable_out = (): TableBinding => {
+        return {
+            tableName: 'session',
+            partitionKey: undefined,
+            rowKey: undefined,
+            connection: this.storageConnection
+        };
+    }
+    binding_sessionTable_out = createTableBinding<SessionTable|SessionTable[]>(this.getBinding_SessionTable_out);
+
+
     getBinding_SessionTable_fromSessionToken = (trigger: { sessionToken: string }): TableBinding => {
         return {
             tableName: 'session',
@@ -40,6 +53,7 @@ export class AccountServerConfig implements ServerConfigType, FunctionTemplateCo
             connection: this.storageConnection
         };
     }
+    binding_sessionTable_fromSessionToken = createTableBinding<SessionTable>(this.getBinding_SessionTable_fromSessionToken, { sessionToken: '' });
 
     getBinding_AccountTable = (): TableBinding => {
         return {
@@ -49,6 +63,8 @@ export class AccountServerConfig implements ServerConfigType, FunctionTemplateCo
             rowKey: undefined,
         };
     }
+    binding_accountTable_out = createTableBinding<AccountTable|AccountTable[]>(this.getBinding_AccountTable);
+    
 
     getUrl_resetPassword = this.options.getUrl_resetPassword;
     getUrl_cancelResetPassword = this.options.getUrl_cancelResetPassword;

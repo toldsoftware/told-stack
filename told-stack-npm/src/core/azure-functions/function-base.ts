@@ -1,9 +1,9 @@
 import { QueueBinding, TableBinding, HttpFunctionResponse, HttpFunctionRequest, Binding, BindingFull, bindingNameToType, HttpBinding } from "../types/functions";
 
 // Context Types
-type DoneVoid = { __type: 'DoneVoid' };
-type JsonString<T> = string & { __type: 'JsonString' };
-type Public<T> = {[K in keyof T]: T[K]; };
+export type DoneVoid = { __type: 'DoneVoid' };
+export type JsonString<T> = string & { __type: 'JsonString' };
+export type Public<T> = {[K in keyof T]: T[K]; };
 
 type Context<TBindings, TBindingData={}> = {
     log: typeof console.log,
@@ -55,7 +55,7 @@ export abstract class FunctionBase_Http<TDefinition extends FunctionDefinitionBa
 
 export abstract class FunctionExtension<TDefinition extends FunctionDefinitionBase> {
 
-    buildMethod<TReturn, TArgs={}>(inner: (context: Context<Public<TDefinition>>, args: TArgs) => Promise<TReturn>) {
+    buildMethod<TReturn, TArgs={}>(inner: (context: Context<Public<TDefinition>>, args?: TArgs) => TReturn) {
         return inner;
     }
 }

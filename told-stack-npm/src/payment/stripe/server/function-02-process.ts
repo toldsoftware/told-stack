@@ -37,8 +37,8 @@ export const createFunctionJson = (config: FunctionTemplateConfig) => build_crea
 
 export const runFunction = build_runFunction_common(buildFunction, async (config: ServerConfigType, context) => {
     const authenticator = new SessionAuthenticator(context.bindings.inSessionTable);
-    const emailProvider = new EmailProvider(config.emailConfig);
-    const accountManager = new AccountManager(config.accountConfig, emailProvider);
+    const sessionManager = new SessionManager(config.accountConfig);
+    const accountManager = new AccountManager(config.accountConfig, sessionManager);
 
     // TODO: Refactor this into methods
 

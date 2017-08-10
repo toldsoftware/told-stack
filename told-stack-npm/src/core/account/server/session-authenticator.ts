@@ -11,6 +11,3 @@ export class SessionAuthenticator {
         return verifyUserPermission(inSessionTable.accountPermissions, userPermission);
     }
 }
-
-
-

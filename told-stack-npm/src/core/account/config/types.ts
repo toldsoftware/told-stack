@@ -30,6 +30,7 @@ export interface AccountTable {
     userAlias?: UserAlias;
     userEvidence?: UserEvidence;
 
+    isVerified?: boolean;
     isDisabled?: boolean;
 }
 
@@ -45,14 +46,17 @@ export enum AccountPermission {
     Full = 'Full',
 }
 
-export function getAccountPermissions_userAliasKind(kind: UserAliasKind): AccountPermission[] {
-    switch (kind) {
+export function getAccountPermissions_userAlias(alias: UserAlias): AccountPermission[] {
+    switch (alias.kind) {
         case UserAliasKind.facebookId:
             return [AccountPermission.Full];
 
         case UserAliasKind.email:
+            //if (!alias.isVerified) {
             return [AccountPermission.SendEmail_ResetPassword];
-
+        // } else {
+        //     return [AccountPermission.SetCredentials];
+        // }
         default:
             return [];
     }
@@ -85,6 +89,7 @@ export type UserAlias =
     {
         kind: UserAliasKind.email;
         email: string;
+        isVerified: boolean;
     } | {
         kind: UserAliasKind.facebookId;
         facebookId: string;

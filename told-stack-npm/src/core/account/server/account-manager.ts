@@ -1,4 +1,4 @@
-import { AccountTable, SessionInfo_Client, UserAlias, SessionInfo, AccountPermission, UserEvidence, UserAliasKind, UserEvidenceKind, getAccountPermissions_userEvidenceKind, getAccountPermissions_userAliasKind } from "../config/types";
+import { AccountTable, SessionInfo_Client, UserAlias, SessionInfo, AccountPermission, UserEvidence, UserAliasKind, UserEvidenceKind, getAccountPermissions_userEvidenceKind, getAccountPermissions_userAlias } from "../config/types";
 import { TableBinding } from "../../types/functions";
 import { createSessonToken_server, createUserId_server, createEvidenceToken } from "../config/account-ids";
 import { encodeTableKey } from "../../utils/encode-key";
@@ -8,6 +8,7 @@ import { createMessage_resetPasswordEmail } from "../../messages/messages";
 import { AccountServerConfig } from "../config/server-config";
 import { unique_values } from "../../utils/objects";
 import { SessionManager } from "./session-manager";
+import { Public } from "../../azure-functions/function-base";
 
 export function encodeAlias(kind: UserAliasKind, alias: string) {
     return encodeURIComponent(`alias-${kind}-${alias}`);
@@ -18,10 +19,7 @@ export function encodeEvidence(kind: UserEvidenceKind, evidence: string) {
 }
 
 export class AccountManager {
-    private sessionManager: SessionManager;
-    constructor(private config: AccountServerConfig, private emailProvider: EmailProvider) {
-        this.sessionManager = new SessionManager(config);
-    }
+    constructor(public config: AccountServerConfig, private sessionManager: Public<SessionManager>) { }
 
     private async verifyUserExists(userId: string) {
         if (!this.doesUserExist(userId)) {
@@ -74,7 +72,7 @@ export class AccountManager {
             });
     }
 
-    private async storeUserEvidence(userId: string, evidence: string, data: UserEvidence, options = { shouldDisableOtherEvidenceOfSameKind: true }) {
+    public async storeUserEvidence(userId: string, evidence: string, data: UserEvidence, options = { shouldDisableOtherEvidenceOfSameKind: true }) {
         this.verifyUserExists(userId);
 
         const accountTableBinding = this.config.getBinding_AccountTable();
@@ -95,7 +93,7 @@ export class AccountManager {
             });
     }
 
-    private async lookupUserAliasEntity(kind: UserAliasKind, alias: string, options = { shouldIncrementUsage: false }): Promise<AccountTable> {
+    public async lookupUserAliasEntity(kind: UserAliasKind, alias: string, options = { shouldIncrementUsage: false, shouldIgnoreDisabled: false }): Promise<AccountTable> {
         const accountTableBinding = this.config.getBinding_AccountTable();
         const aliasEncoded = encodeAlias(kind, alias);
 
@@ -112,7 +110,7 @@ export class AccountManager {
             });
         }
 
-        if (entity.isDisabled) { return null; }
+        if (!options.shouldIgnoreDisabled && entity.isDisabled) { return null; }
         return entity;
     }
 
@@ -163,48 +161,43 @@ export class AccountManager {
         await this.storeUserAlias(userId, email, {
             kind: UserAliasKind.email,
             email,
+            isVerified: false,
         });
     }
 
-    async sendEmail_resetPassword(email: string): Promise<{ isEmailSending: boolean, error?: string }> {
-        const emailProvider = this.emailProvider;
+    // async storeAlias_email_verified(userId: string, email: string) {
+    //     await this.storeUserAlias(userId, email, {
+    //         kind: UserAliasKind.email,
+    //         email,
+    //         isVerified: true,
+    //     });
+    // }
 
-        // Get UserId
-        const c = await this.lookupUserAliasEntity(UserAliasKind.email, email);
+    // Verified Externally
+    // TODO: Use User Evidence for Email Verification (Create User Account upon send Verification Email)
+    async verifyEmail(userId: string, email: string, oldSessionToken?: string, options = { shouldCreateSession: true }) {
+        await this.storeUserAlias(userId, email, {
+            kind: UserAliasKind.email,
+            email,
+            isVerified: true,
+        });
 
-        // Do not send this information to the client (Instead, tell user that if email exists it will be sent and offer customer support)
-        // Do not send email to unknown emails (could be used to force server to spam)
-        if (!c) {
-            return {
-                isEmailSending: false,
-                error: 'Email not Found',
-            }
+        const accountPermissions = [AccountPermission.SetCredentials];
+        const userAuthorizations = unique_values<string>([]);
+        if (!options.shouldCreateSession) {
+            return await this.sessionManager.createNewSession(userId, accountPermissions, userAuthorizations, oldSessionToken);
         }
-
-        // Create new token
-        const resetPasswordToken = createEvidenceToken();
-        const expireTime = Date.now() + this.config.resetPasswordExpireTimeMs;
-
-        this.storeUserEvidence(c.userId, resetPasswordToken, {
-            kind: UserEvidenceKind.token_resetPassword,
-            resetPasswordToken,
-            expireTime,
-            maxUsages: 1,
-        }, { shouldDisableOtherEvidenceOfSameKind: true });
-
-        const resetPasswordUrl = this.config.getUrl_resetPassword(resetPasswordToken);
-        const cancelUrl = this.config.getUrl_cancelResetPassword(resetPasswordToken);
-        await emailProvider.sendEmail(email, createMessage_resetPasswordEmail(email, resetPasswordUrl, cancelUrl, expireTime));
-
-        return { isEmailSending: true };
+        else{
+            return null;
+        }
     }
 
     async login(alias: { value: string, kind: UserAliasKind }, evidence?: { value: string, kind: UserEvidenceKind }, oldSessionToken?: string) {
-        const aliasEntity = await this.lookupUserAliasEntity(alias.kind, alias.value, { shouldIncrementUsage: true });
+        const aliasEntity = await this.lookupUserAliasEntity(alias.kind, alias.value, { shouldIncrementUsage: true, shouldIgnoreDisabled: false });
         const userId = aliasEntity.userId;
         const evidenceEntity = evidence && await this.lookupUserEvidenceEntity(userId, evidence.kind, evidence.value, { shouldIncrementUsage: true });
         const accountPermissions = unique_values([
-            ...getAccountPermissions_userAliasKind(aliasEntity.userAlias.kind),
+            ...getAccountPermissions_userAlias(aliasEntity.userAlias),
             ...evidenceEntity && getAccountPermissions_userEvidenceKind(evidenceEntity.userEvidence.kind) || [],
         ]);
 
