@@ -5,6 +5,8 @@ export type DoneVoid = { __type: 'DoneVoid' };
 export type JsonString<T> = string & { __type: 'JsonString' };
 export type Public<T> = {[K in keyof T]: T[K]; };
 
+export const IGNORE = !true;
+
 type Context<TBindings, TBindingData={}> = {
     log: typeof console.log,
     done: (error?: any) => DoneVoid,

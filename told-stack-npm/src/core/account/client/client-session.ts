@@ -1,5 +1,6 @@
-import { SessionInfo_Client, AccountPermission, SessionInfo } from "../config/types";
+import { SessionInfo_Client, AccountPermission, SessionInfo, verifyAccountPermission } from "../config/types";
 import { createSessonToken_client, createUserId_anonymous_client } from "../config/account-ids";
+export { AccountPermission };
 
 export class ClientSession implements SessionInfo_Client {
     public sessionToken = createSessonToken_client();
@@ -17,6 +18,11 @@ export class ClientSession implements SessionInfo_Client {
         this.sessionToken = sessionInfo.sessionToken;
         this.userId_claimed = sessionInfo.userId;
         this.accountPermissions_claimed = sessionInfo.accountPermissions;
+    }
+
+    verifyAccountPermission_claimed(requiredPermission: AccountPermission) {
+        // This doesn't provide actual security, it just allows the UI to do some pre-verification for valid clients
+        return verifyAccountPermission(this.accountPermissions_claimed, requiredPermission);
     }
 }
 

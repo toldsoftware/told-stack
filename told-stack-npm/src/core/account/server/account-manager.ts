@@ -1,4 +1,4 @@
-import { AccountTable, SessionInfo_Client, UserAlias, SessionInfo, AccountPermission, UserEvidence, UserAliasKind, UserEvidenceKind, getAccountPermissions_userEvidenceKind, getAccountPermissions_userAlias, verifyUserPermission } from "../config/types";
+import { AccountTable, SessionInfo_Client, UserAlias, SessionInfo, AccountPermission, UserEvidence, UserAliasKind, UserEvidenceKind, getAccountPermissions_userEvidenceKind, getAccountPermissions_userAlias, verifyAccountPermission } from "../config/types";
 import { createSessonToken_server, createUserId_server, createEvidenceToken } from "../config/account-ids";
 import { encodeTableKey } from "../../utils/encode-key";
 import { saveTableEntities_merge, loadTableEntity, findTableEntities } from "../../utils/azure-storage-binding/tables-sdk";
@@ -9,6 +9,8 @@ import { unique_values } from "../../utils/objects";
 import { SessionManager } from "./session-manager";
 import { Public } from "../../azure-functions/function-base";
 import { EmailMessage } from "../../email/config/types";
+import { SessionAuthenticator } from "./session-authenticator";
+import { hashPassword } from "../../utils/password";
 
 export function encodeAlias(kind: UserAliasKind, alias: string) {
     return encodeURIComponent(`alias-${kind}-${alias}`);
@@ -23,7 +25,13 @@ export interface EmailSender {
 }
 
 export class AccountManager {
-    constructor(public config: AccountServerConfig, private sessionManager: Public<SessionManager>, private emailSender: EmailSender, private debug: { log: typeof console.log }) { }
+    constructor(
+        public config: AccountServerConfig,
+        private sessionAuthenticator: Public<SessionAuthenticator>,
+        private sessionManager: Public<SessionManager>,
+        private emailSender: EmailSender,
+        private debug: { log: typeof console.log }
+    ) { }
 
     private async verifyUserExists(userId: string) {
         if (!this.doesUserExist(userId)) {
@@ -146,13 +154,11 @@ export class AccountManager {
             });
         }
 
-        if (!entity
-            || entity.isDisabled
-            || Date.now() > entity.userEvidence.expireTime
-            || entity.usageCount > entity.userEvidence.maxUsages
-        ) {
-            this.debug.log('lookupUserEvidenceEntity FAIL entity not valid', { entity });
-            return null;
+        if (!entity) { this.debug.log('lookupUserEvidenceEntity FAIL entity not found', { entity }); return null; }
+        else if (entity.isDisabled) { this.debug.log('lookupUserEvidenceEntity FAIL entity disabled', { entity }); return null; }
+        else if (entity.userEvidence.kind !== UserEvidenceKind.password) {
+            if (Date.now() > entity.userEvidence.expireTime) { this.debug.log('lookupUserEvidenceEntity FAIL evidence expired', { entity }); return null; }
+            if (entity.usageCount > entity.userEvidence.maxUsages) { this.debug.log('lookupUserEvidenceEntity FAIL evidence exhausted', { entity }); return null; }
         }
 
         this.debug.log('lookupUserEvidenceEntity END', { entity });
@@ -170,35 +176,6 @@ export class AccountManager {
         await saveTableEntities_merge(accountTableBinding, ...entitiesDisabled);
     }
 
-
-
-    // async storeAlias_email_verified(userId: string, email: string) {
-    //     await this.storeUserAlias(userId, email, {
-    //         kind: UserAliasKind.email,
-    //         email,
-    //         isVerified: true,
-    //     });
-    // }
-
-    // // Verified Externally
-    // // TODO: Use User Evidence for Email Verification (Create User Account upon send Verification Email)
-    // async verifyEmail(userId: string, email: string, oldSessionToken?: string, options = { shouldCreateSession: true }) {
-    //     await this.storeUserAlias(userId, email, {
-    //         kind: UserAliasKind.email,
-    //         email,
-    //         isVerified: true,
-    //     });
-
-    //     const accountPermissions = [AccountPermission.SetCredentials];
-    //     const userAuthorizations = unique_values<string>([]);
-    //     if (!options.shouldCreateSession) {
-    //         return await this.sessionManager.createNewSession(userId, accountPermissions, userAuthorizations, oldSessionToken);
-    //     }
-    //     else {
-    //         return null;
-    //     }
-    // }
-
     async login(alias: { value: string, kind: UserAliasKind }, evidence?: { value: string, kind: UserEvidenceKind }, oldSessionToken?: string) {
         this.debug.log('login START', { alias, evidence, oldSessionToken });
 
@@ -209,6 +186,11 @@ export class AccountManager {
         }
 
         const userId = aliasEntity.userId;
+        return await this.login_userId(userId, getAccountPermissions_userAlias(aliasEntity.userAlias), evidence, oldSessionToken);
+    }
+
+    private async login_userId(userId: string, userAliasPermissions: AccountPermission[], evidence?: { value: string, kind: UserEvidenceKind }, oldSessionToken?: string) {
+
         const evidenceEntity = evidence && await this.lookupUserEvidenceEntity(userId, evidence.kind, evidence.value, { shouldIncrementUsage: true });
 
         if (evidence && !evidenceEntity) {
@@ -217,7 +199,7 @@ export class AccountManager {
         }
 
         const accountPermissions = unique_values([
-            ...getAccountPermissions_userAlias(aliasEntity.userAlias),
+            ...userAliasPermissions,
             ...evidenceEntity && getAccountPermissions_userEvidenceKind(evidenceEntity.userEvidence.kind) || [],
         ]);
 
@@ -303,5 +285,41 @@ export class AccountManager {
         }
 
         return result;
+    }
+
+    // Password
+    async getPasswordHash(userId: string, password: string) {
+        // userId is a sufficient salt source
+        const userSalt = userId;
+        return await hashPassword(password, userSalt);
+    }
+
+    async changePassword(sessionToken: string, password: string) {
+        this.debug.log('changePassword START', { sessionToken });
+
+        if (!password) {
+            this.debug.log('changePassword FAIL No Password', { sessionToken });
+            //return { error: 'No Password' };
+            return null;
+        }
+        if (!this.sessionAuthenticator.authenticateSession_accountPermission(AccountPermission.SetCredentials)) {
+            this.debug.log('changePassword FAIL Insufficient Account Permissions', { sessionToken });
+            // return { error: 'Insufficient Account Permissions: Cannot change password' };
+            return null;
+        }
+
+        this.debug.log('changePassword getUserId', { sessionToken });
+        const userId = this.sessionAuthenticator.getUserId();
+        const passwordHash = await this.getPasswordHash(userId, password);
+
+        this.debug.log('changePassword save password', { sessionToken });
+        const evidence: UserEvidence = { kind: UserEvidenceKind.password, passwordHash };
+        await this.storeUserEvidence(userId, passwordHash, evidence, sessionToken, { shouldDisableOtherEvidenceOfSameKind: true });
+
+        this.debug.log('changePassword login with password', { sessionToken });
+        const sessionInfo = await this.login_userId(userId, [], { kind: evidence.kind, value: evidence.passwordHash }, sessionToken);
+
+        this.debug.log('changePassword END', { sessionInfo });
+        return sessionInfo;
     }
 }

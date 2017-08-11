@@ -1,3 +1,5 @@
+import { PasswordHash } from "../../utils/password";
+
 export interface SessionInfo_Client {
     sessionToken: string;
     isAnonymous: boolean;
@@ -34,7 +36,7 @@ export interface AccountTable {
     isDisabled?: boolean;
 }
 
-export function verifyUserPermission(actualPermissions: AccountPermission[], requiredPermission: AccountPermission) {
+export function verifyAccountPermission(actualPermissions: AccountPermission[], requiredPermission: AccountPermission) {
     return actualPermissions.indexOf(AccountPermission.Full) >= 0
         || actualPermissions.indexOf(requiredPermission) >= 0;
 }
@@ -67,6 +69,7 @@ export function getAccountPermissions_userEvidenceKind(kind: UserEvidenceKind): 
         case UserEvidenceKind.password:
             return [AccountPermission.Full];
 
+        case UserEvidenceKind.token_verifyEmail:
         case UserEvidenceKind.token_resetPassword:
             return [AccountPermission.SetCredentials];
 
@@ -98,11 +101,14 @@ export type UserAlias =
 
 export type UserEvidence =
     {
+        kind: UserEvidenceKind.password;
+        passwordHash: PasswordHash;
+    } | {
         kind: UserEvidenceKind.token_verifyEmail;
         verificationToken: string;
         expireTime: number;
         maxUsages: 1;
-    } |  {
+    } | {
         kind: UserEvidenceKind.token_resetPassword;
         resetPasswordToken: string;
         expireTime: number;

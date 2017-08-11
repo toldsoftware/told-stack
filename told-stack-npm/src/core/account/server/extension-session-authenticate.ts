@@ -1,6 +1,6 @@
 import { FunctionDefinitionBase, FunctionExtension } from "../../azure-functions/function-base";
 import { AccountServerConfig } from "../config/server-config";
-import { AccountPermission, verifyUserPermission } from "../config/types";
+import { AccountPermission, verifyAccountPermission } from "../config/types";
 
 export class FunctionDefinition extends FunctionDefinitionBase {
     constructor(private config: AccountServerConfig) {
@@ -19,6 +19,13 @@ export class Function extends FunctionExtension<FunctionDefinition>{
         const inSessionTable = context.bindings.inSessionTable;
         if (!inSessionTable) { return false; }
 
-        return verifyUserPermission(inSessionTable.accountPermissions, userPermission);
+        return verifyAccountPermission(inSessionTable.accountPermissions, userPermission);
+    });
+
+    getUserId = this.buildMethod((context) => () => {
+        const inSessionTable = context.bindings.inSessionTable;
+        if (!inSessionTable) { return null; }
+
+        return inSessionTable.userId;
     });
 }

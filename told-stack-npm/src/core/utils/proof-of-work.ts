@@ -1,4 +1,8 @@
-const EXPIRE_TIME_MS = 60 * 1000;
+// const EXPIRE_TIME_MS = 60 * 1000;
+
+// TODO: Handle Incorrect Client Time 
+// TEMP" For Now allow a large window for the expire time to catch any timezone errors
+const EXPIRE_TIME_MS = 3 * 24 * 60 * 60 * 1000;
 
 const isValidSolution_versions = {
     around10ms: (hashCode: number, pow: number, now: number) => ((hashCode + pow) * 100003 % 99233) === ((pow + now) * 100361 % 99241),
@@ -11,7 +15,7 @@ const isValidSolution_versions = {
 type IsValidSolution = (hashCode: number, pow: number, now: number) => boolean;
 type PowVersion = keyof typeof isValidSolution_versions;
 
-export type PowString<T> = string & { __type: 'PowString' };
+export type PowString<T> = string & { __type: keyof T };
 
 interface ProofOfWorkJson {
     json: string;
@@ -69,7 +73,7 @@ function generatePow(isValidSolution: IsValidSolution, json: string, now: number
 
 function verifyPow(isValidSolution: IsValidSolution, { json, pow, now }: ProofOfWorkJson) {
     // Check expiration
-    if (Date.now() > 1 * (now as any) + EXPIRE_TIME_MS) {
+    if (Math.abs(Date.now() - (1 * (now as any))) > EXPIRE_TIME_MS) {
         return false;
     }
 
