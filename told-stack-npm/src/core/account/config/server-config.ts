@@ -5,7 +5,7 @@ import { ServerConfig as EmailServerConfig } from "../../email/config/server-con
 
 export interface FunctionTemplateConfig {
     getBinding_http: (trigger: { sessionToken: string }) => HttpBinding;
-    getBinding_SessionTable_fromSessionToken: (trigger: { sessionToken: string }) => TableBinding;
+    getBinding_sessionTable_fromSessionToken: (trigger: { sessionToken: string }) => TableBinding;
 }
 
 export const sessionTokenTrigger = {
@@ -33,7 +33,7 @@ export class AccountServerConfig implements ServerConfigType, FunctionTemplateCo
         };
     }
 
-    getBinding_SessionTable_out = (): TableBinding => {
+    getBinding_sessionTable_out = (): TableBinding => {
         return {
             tableName: 'session',
             partitionKey: undefined,
@@ -41,10 +41,10 @@ export class AccountServerConfig implements ServerConfigType, FunctionTemplateCo
             connection: this.storageConnection
         };
     }
-    binding_sessionTable_out = createTableBinding<SessionTable[]>(this.getBinding_SessionTable_out);
+    binding_sessionTable_out = createTableBinding<SessionTable[]>(this.getBinding_sessionTable_out);
 
 
-    getBinding_SessionTable_fromSessionToken = (trigger: { sessionToken: string }): TableBinding => {
+    getBinding_sessionTable_fromSessionToken = (trigger: { sessionToken: string }): TableBinding => {
         return {
             tableName: 'session',
             partitionKey: `${trigger.sessionToken}`,
@@ -52,11 +52,20 @@ export class AccountServerConfig implements ServerConfigType, FunctionTemplateCo
             connection: this.storageConnection
         };
     }
-    binding_sessionTable_fromSessionToken = createTableBinding<SessionTable>(this.getBinding_SessionTable_fromSessionToken, { sessionToken: '' });
+    binding_sessionTable_fromSessionToken = createTableBinding<SessionTable>(this.getBinding_sessionTable_fromSessionToken, { sessionToken: '' });
 
-    getBinding_AccountTable = (): TableBinding => {
+    getBinding_accountTable = (): TableBinding => {
         return {
             tableName: 'user',
+            connection: this.storageConnection,
+            partitionKey: undefined,
+            rowKey: undefined,
+        };
+    }
+
+    getBinding_accountAttemptTable = (): TableBinding => {
+        return {
+            tableName: 'userattempt',
             connection: this.storageConnection,
             partitionKey: undefined,
             rowKey: undefined,

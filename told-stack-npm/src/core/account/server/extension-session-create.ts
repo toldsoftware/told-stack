@@ -31,7 +31,7 @@ export class Function extends FunctionExtension<FunctionDefinition>{
             userAuthorizations,
         };
 
-        const newSessionTableBinding = this.config.getBinding_SessionTable_fromSessionToken({ sessionToken });
+        const newSessionTableBinding = this.config.getBinding_sessionTable_fromSessionToken({ sessionToken });
 
         const outSessionTable = context.bindings.outSessionTable = context.bindings.outSessionTable || [];
         outSessionTable.push({

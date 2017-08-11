@@ -47,7 +47,13 @@ export class AutoDeviceStorage<T>{
                 }
 
                 console.log('AutoDeviceStorage LOAD', { key: this.key, value: x, cache: this._cache });
-                resolve(this._cache = JSON.parse(x));
+
+                try {
+                    const value = JSON.parse(x);
+                    this._cache = value;
+                } catch (err) { }
+
+                resolve(this._cache || this.defaultValue);
                 this.onValueLoaded();
             });
         });
@@ -71,6 +77,7 @@ export class AutoDeviceStorage<T>{
         }
 
         this._cache = val;
-        Storage.setItem_noMemCache(this._propKey, JSON.stringify(val));
+        const json = val === undefined || val === null ? undefined : JSON.stringify(val);
+        Storage.setItem_noMemCache(this._propKey, json);
     }
 }

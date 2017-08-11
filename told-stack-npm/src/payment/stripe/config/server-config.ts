@@ -186,8 +186,8 @@ export class ServerConfig implements ServerConfigType, FunctionTemplateConfig {
         };
     }
 
-    getBinding_sessionTable = this.accountConfig.getBinding_SessionTable_fromSessionToken;
-    getBinding_accountTable = this.accountConfig.getBinding_AccountTable;
+    getBinding_sessionTable = this.accountConfig.getBinding_sessionTable_fromSessionToken;
+    getBinding_accountTable = this.accountConfig.getBinding_accountTable;
 
 
     getEmailHash = this.clientConfig.getEmailHash;

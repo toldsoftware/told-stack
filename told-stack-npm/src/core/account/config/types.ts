@@ -99,6 +99,17 @@ export type UserAlias =
         facebookId: string;
     };
 
+export function getAliasValue_orJson(alias: UserAlias) {
+    switch (alias.kind) {
+        case UserAliasKind.email:
+            return alias.email;
+        case UserAliasKind.facebookId:
+            return alias.facebookId;
+        default:
+            return JSON.stringify(alias || {});
+    }
+}
+
 export type UserEvidence =
     {
         kind: UserEvidenceKind.password;

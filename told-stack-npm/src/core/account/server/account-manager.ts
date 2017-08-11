@@ -1,4 +1,4 @@
-import { AccountTable, SessionInfo_Client, UserAlias, SessionInfo, AccountPermission, UserEvidence, UserAliasKind, UserEvidenceKind, getAccountPermissions_userEvidenceKind, getAccountPermissions_userAlias, verifyAccountPermission } from "../config/types";
+import { AccountTable, SessionInfo_Client, UserAlias, SessionInfo, AccountPermission, UserEvidence, UserAliasKind, UserEvidenceKind, getAccountPermissions_userEvidenceKind, getAccountPermissions_userAlias, verifyAccountPermission, getAliasValue_orJson } from "../config/types";
 import { createSessonToken_server, createUserId_server, createEvidenceToken } from "../config/account-ids";
 import { encodeTableKey } from "../../utils/encode-key";
 import { saveTableEntities_merge, loadTableEntity, findTableEntities } from "../../utils/azure-storage-binding/tables-sdk";
@@ -11,6 +11,7 @@ import { Public } from "../../azure-functions/function-base";
 import { EmailMessage } from "../../email/config/types";
 import { SessionAuthenticator } from "./session-authenticator";
 import { hashPassword } from "../../utils/password";
+import { randHex } from "../../utils/rand";
 
 export function encodeAlias(kind: UserAliasKind, alias: string) {
     return encodeURIComponent(`alias-${kind}-${alias}`);
@@ -40,13 +41,13 @@ export class AccountManager {
     }
 
     async doesUserExist(userId: string) {
-        const accountTableBinding = this.config.getBinding_AccountTable();
+        const accountTableBinding = this.config.getBinding_accountTable();
         const u = loadTableEntity(accountTableBinding, userId, 'user');
         return !!u;
     }
 
     async createNewUser(oldSessionToken?: string) {
-        const accountTableBinding = this.config.getBinding_AccountTable();
+        const accountTableBinding = this.config.getBinding_accountTable();
         const userId = createUserId_server();
         await saveTableEntities_merge(accountTableBinding, {
             PartitionKey: userId,
@@ -59,7 +60,7 @@ export class AccountManager {
     private async storeUserAlias(userId: string, alias: string, data: UserAlias) {
         this.verifyUserExists(userId);
 
-        const accountTableBinding = this.config.getBinding_AccountTable();
+        const accountTableBinding = this.config.getBinding_accountTable();
         const aliasEncoded = encodeAlias(data.kind, alias);
 
         // Verify Alias doesn't exist already
@@ -87,7 +88,7 @@ export class AccountManager {
     public async storeUserEvidence(userId: string, evidence: string, data: UserEvidence, sessionToken_request: string, options = { shouldDisableOtherEvidenceOfSameKind: true }) {
         this.verifyUserExists(userId);
 
-        const accountTableBinding = this.config.getBinding_AccountTable();
+        const accountTableBinding = this.config.getBinding_accountTable();
         const evidenceEncoded = encodeEvidence(data.kind, evidence);
 
         if (!options || options.shouldDisableOtherEvidenceOfSameKind) {
@@ -109,14 +110,16 @@ export class AccountManager {
     public async lookupUserAliasEntity(kind: UserAliasKind, alias: string, options = { shouldIncrementUsage: false, shouldIgnoreDisabled: false }): Promise<AccountTable> {
         this.debug.log('lookupUserAliasEntity START');
 
-        const accountTableBinding = this.config.getBinding_AccountTable();
+        const accountTableBinding = this.config.getBinding_accountTable();
         const aliasEncoded = encodeAlias(kind, alias);
 
         this.debug.log('lookupUserAliasEntity loadTableEntity', { kind, alias, aliasEncoded, accountTableBinding });
         const lookup = await loadTableEntity<AccountTable>(accountTableBinding, aliasEncoded, 'lookup');
         const entity = lookup && await loadTableEntity<AccountTable>(accountTableBinding, lookup.userId, aliasEncoded);
 
-        if (entity && options && options.shouldIncrementUsage) {
+        if (!entity) { this.debug.log('lookupUserAliasEntity FAIL entity not found', { kind, alias }); return null; }
+
+        if (options && options.shouldIncrementUsage) {
             this.debug.log('lookupUserAliasEntity incrementUsage', { entity });
 
             entity.usageCount++;
@@ -136,13 +139,15 @@ export class AccountManager {
     private async lookupUserEvidenceEntity(userId: string, kind: UserEvidenceKind, evidence: string, options = { shouldIncrementUsage: false }): Promise<AccountTable> {
         this.debug.log('lookupUserEvidenceEntity START');
 
-        const accountTableBinding = this.config.getBinding_AccountTable();
+        const accountTableBinding = this.config.getBinding_accountTable();
         const evidenceEncoded = encodeEvidence(kind, evidence);
 
-        this.debug.log('lookupUserEvidenceEntity loadTableEntity', { kind, evidence, evidenceEncoded, accountTableBinding });
+        this.debug.log('lookupUserEvidenceEntity loadTableEntity', { kind, accountTableBinding });
         const entity = await loadTableEntity<AccountTable>(accountTableBinding, userId, evidenceEncoded);
 
-        if (entity && options && options.shouldIncrementUsage) {
+        if (!entity) { this.debug.log('lookupUserEvidenceEntity FAIL entity not found', { userId, kind }); return null; }
+
+        if (options && options.shouldIncrementUsage) {
             this.debug.log('lookupUserEvidenceEntity incrementUsage', { entity });
 
             entity.usageCount++;
@@ -154,21 +159,20 @@ export class AccountManager {
             });
         }
 
-        if (!entity) { this.debug.log('lookupUserEvidenceEntity FAIL entity not found', { entity }); return null; }
         else if (entity.isDisabled) { this.debug.log('lookupUserEvidenceEntity FAIL entity disabled', { entity }); return null; }
         else if (entity.userEvidence.kind !== UserEvidenceKind.password) {
             if (Date.now() > entity.userEvidence.expireTime) { this.debug.log('lookupUserEvidenceEntity FAIL evidence expired', { entity }); return null; }
             if (entity.usageCount > entity.userEvidence.maxUsages) { this.debug.log('lookupUserEvidenceEntity FAIL evidence exhausted', { entity }); return null; }
         }
 
-        this.debug.log('lookupUserEvidenceEntity END', { entity });
+        this.debug.log('lookupUserEvidenceEntity END');
         return entity;
     }
 
     private async disableEvidenceOfKind(userId: string, kind: UserEvidenceKind) {
         this.verifyUserExists(userId);
 
-        const accountTableBinding = this.config.getBinding_AccountTable();
+        const accountTableBinding = this.config.getBinding_accountTable();
         const evidenceEncoded_prefix = encodeEvidence(kind, '');
 
         const entities = await findTableEntities<AccountTable>(accountTableBinding, userId, evidenceEncoded_prefix);
@@ -176,30 +180,104 @@ export class AccountManager {
         await saveTableEntities_merge(accountTableBinding, ...entitiesDisabled);
     }
 
+    // Throttle
+    private async logLoginAttempts(message: string, aliasKindValue: { value: string, kind: UserAliasKind | 'userId' }, sessionToken: string, userId: string, evidence: { value: string, kind: UserEvidenceKind }) {
+        this.debug.log('logLoginAttempts START');
+
+        const tableBinding = this.config.getBinding_accountAttemptTable();
+
+        this.debug.log('logLoginAttempts get aliasEncoded');
+        const aliasEncoded = aliasKindValue && encodeAlias(aliasKindValue.kind as UserAliasKind, aliasKindValue.value) || 'alias-[NULL]';
+
+        this.debug.log('logLoginAttempts clean evidence');
+        if (evidence) {
+            evidence = { ...evidence };
+            evidence.value = this.cleanEvidenceForLog(evidence.value);
+        }
+
+        this.debug.log('logLoginAttempts saveTableEntities');
+        await saveTableEntities_merge(tableBinding, {
+            PartitionKey: aliasEncoded,
+            RowKey: '' + Date.now() + '' + randHex(8),
+            message,
+            sessionToken,
+            userId,
+            evidence,
+        });
+
+        this.debug.log('logLoginAttempts END');
+    }
+
+    private cleanEvidenceForLog(value: string) {
+        if (!value) {
+            return '[NULL]';
+        }
+
+        if (!value.length || !value.substr) {
+            this.debug.log('cleanEvidenceForLog FAIL value not a string', value);
+            return '[NOT STRING]';
+        }
+
+        if (value.length < 50) {
+            return '[HIDDEN]';
+        } else {
+            return value.substr(0, 32) + '...';
+        }
+    }
+
+    private getAliasKindValue(alias: UserAlias) {
+        if (!alias) { return null; }
+        return { kind: alias.kind, value: getAliasValue_orJson(alias) }
+    }
+
+    private async throttleLoginAttempts(userId: string, aliasEntity: AccountTable, evidence: { value: string, kind: UserEvidenceKind }, sessionToken: string) {
+        await this.logLoginAttempts('LoginAttempt', this.getAliasKindValue(aliasEntity.userAlias), sessionToken, userId, evidence);
+
+        // TODO: Implement Throttle
+        return false;
+    }
+
+    private async throttleVerifyEmailAttempts(email: string, sessionToken: string) {
+        await this.logLoginAttempts('VerifyEmailAttempt', { kind: UserAliasKind.email, value: email }, sessionToken, null, null);
+
+        // TODO: Implement Throttle
+        return false;
+    }
+
+    // Login
     async login(alias: { value: string, kind: UserAliasKind }, evidence?: { value: string, kind: UserEvidenceKind }, oldSessionToken?: string) {
-        this.debug.log('login START', { alias, evidence, oldSessionToken });
+        this.debug.log('login START', { alias, oldSessionToken });
 
         const aliasEntity = await this.lookupUserAliasEntity(alias.kind, alias.value, { shouldIncrementUsage: true, shouldIgnoreDisabled: false });
         if (!aliasEntity) {
             this.debug.log('login FAIL aliasEntity not found', { alias });
+            await this.logLoginAttempts('LoginAttempt FAILED: alias not found', alias, oldSessionToken, null, evidence);
             return null;
         }
 
         const userId = aliasEntity.userId;
-        return await this.login_userId(userId, getAccountPermissions_userAlias(aliasEntity.userAlias), evidence, oldSessionToken);
+
+        // Hash evidences that are required
+        if (evidence && evidence.kind === UserEvidenceKind.password) {
+            evidence.value = await this.getPasswordHash(userId, evidence.value);
+        }
+
+        if (await this.throttleLoginAttempts(userId, aliasEntity, evidence, oldSessionToken)) { return null; }
+
+        return await this.login_userId(userId, evidence, oldSessionToken, aliasEntity.userAlias);
     }
 
-    private async login_userId(userId: string, userAliasPermissions: AccountPermission[], evidence?: { value: string, kind: UserEvidenceKind }, oldSessionToken?: string) {
-
+    private async login_userId(userId: string, evidence: { value: string, kind: UserEvidenceKind }, oldSessionToken: string, userAlias: UserAlias = null) {
         const evidenceEntity = evidence && await this.lookupUserEvidenceEntity(userId, evidence.kind, evidence.value, { shouldIncrementUsage: true });
 
         if (evidence && !evidenceEntity) {
-            this.debug.log('login FAIL evidenceEntity not found', { userId, evidence });
+            this.debug.log('login FAIL evidenceEntity not found', { userId });
+            await this.logLoginAttempts('LoginAttempt FAILED: evidence not found', this.getAliasKindValue(userAlias) || { kind: 'userId', value: userId }, oldSessionToken, null, evidence);
             return null;
         }
 
         const accountPermissions = unique_values([
-            ...userAliasPermissions,
+            ...userAlias && getAccountPermissions_userAlias(userAlias) || [],
             ...evidenceEntity && getAccountPermissions_userEvidenceKind(evidenceEntity.userEvidence.kind) || [],
         ]);
 
@@ -237,14 +315,14 @@ export class AccountManager {
     }
 
     async sendEmailVerification_createUserIfNone(sessionToken_request: string, email: string, generateMessage: (verificationToken: string) => EmailMessage) {
-        if (!email) { return { error: 'No Email' }; }
+        if (!email) { return { error: 'Missing Email' }; }
 
         this.debug.log('sendEmailVerification_createUserIfNone START');
 
         const verificationToken = createEvidenceToken();
         const expireTime = Date.now() + this.config.emailTokenExpireTimeMs;
 
-        // TODO: Throttle the email and session
+        if (await this.throttleVerifyEmailAttempts(email, sessionToken_request)) { return { error: 'Max Attempts Exceeded: Please Wait and Try Again Later' }; }
 
         this.debug.log('sendEmailVerification_createUserIfNone lookupUserAliasEntity');
         const user = await this.lookupUserAliasEntity(UserAliasKind.email, email, { shouldIgnoreDisabled: true, shouldIncrementUsage: false });
@@ -326,7 +404,7 @@ export class AccountManager {
         await this.storeUserEvidence(userId, passwordHash, evidence, sessionToken, { shouldDisableOtherEvidenceOfSameKind: true });
 
         this.debug.log('changePassword login with password', { sessionToken });
-        const sessionInfo = await this.login_userId(userId, [], { kind: evidence.kind, value: evidence.passwordHash }, sessionToken);
+        const sessionInfo = await this.login_userId(userId, { kind: evidence.kind, value: evidence.passwordHash }, sessionToken);
 
         this.debug.log('changePassword END', { sessionInfo });
         return sessionInfo;

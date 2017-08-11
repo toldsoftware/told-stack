@@ -15,7 +15,7 @@ export class SessionManager {
             userAuthorizations,
         };
 
-        const sessionTableBinding = this.config.getBinding_SessionTable_fromSessionToken({ sessionToken });
+        const sessionTableBinding = this.config.getBinding_sessionTable_fromSessionToken({ sessionToken });
 
         await saveTableEntities_merge(sessionTableBinding,
             {

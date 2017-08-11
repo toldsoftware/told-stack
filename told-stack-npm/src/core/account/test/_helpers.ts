@@ -4,7 +4,7 @@ import { SessionTable, AccountTable } from "../config/types";
 
 export async function loadSessionTableEntity(testConfig: TestConfig, sessionToken: string) {
     // Manually load session table
-    const binding = testConfig.serverConfig.getBinding_SessionTable_fromSessionToken({ sessionToken });
+    const binding = testConfig.serverConfig.getBinding_sessionTable_fromSessionToken({ sessionToken });
     const entity = await loadTableEntity<SessionTable>(
         binding,
         binding.partitionKey,
@@ -16,7 +16,7 @@ export async function loadSessionTableEntity(testConfig: TestConfig, sessionToke
 
 export async function loadAccountTableEntity(testConfig: TestConfig, userId: string, value: string) {
     // Manually load account table
-    const binding = testConfig.serverConfig.getBinding_AccountTable();
+    const binding = testConfig.serverConfig.getBinding_accountTable();
     const entity = await loadTableEntity<AccountTable>(
         binding,
         userId,
