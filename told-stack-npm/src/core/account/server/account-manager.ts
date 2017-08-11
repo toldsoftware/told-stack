@@ -294,6 +294,15 @@ export class AccountManager {
         return await hashPassword(password, userSalt);
     }
 
+    async loginEmailPassword(email: string, password: string, sessionToken_request: string) {
+        const sessionInfo = await this.login(
+            { kind: UserAliasKind.email, value: email },
+            { kind: UserEvidenceKind.password, value: password },
+            sessionToken_request);
+
+        return sessionInfo;
+    }
+
     async changePassword(sessionToken: string, password: string) {
         this.debug.log('changePassword START', { sessionToken });
 
