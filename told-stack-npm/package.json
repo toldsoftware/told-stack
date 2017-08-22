@@ -1,11 +1,12 @@
 {
   "name": "@told/stack",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Monorepo for Feature Oriented Modules",
   "main": "./src/index.js",
   "types": "./src/index.ts",
   "scripts": {
     "test": "jest --watch",
+    "clean": "rimraf **/*.js **/*.map",
     "start": "run-p start-pre-build start-webpack start-post-build",
     "start-pre-build": "nodemon -e ts --watch config/entries.ts --exec \"ts-node ./core/build/pre-build.ts\"",
     "start-webpack": "nodemon -e ts --watch config --watch webpack.config.ts --exec \"webpack -w\"",
