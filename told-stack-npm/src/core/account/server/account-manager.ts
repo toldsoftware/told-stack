@@ -291,14 +291,21 @@ export class AccountManager {
     }
 
     // Emails
+    private formatEmail(email: string) {
+        return (email || '').toLowerCase();
+    }
 
     // Deprecated?
     async canUserClaimEmail(userId: string, email: string) {
+        email = this.formatEmail(email);
+
         const emailEntity = await this.lookupUserAliasEntity(UserAliasKind.email, email, { shouldIgnoreDisabled: true, shouldIncrementUsage: false });
         return !emailEntity || emailEntity.userId === userId;
     }
 
     async storeAlias_email_unverified(userId: string, email: string) {
+        email = this.formatEmail(email);
+
         await this.storeUserAlias(userId, email, {
             kind: UserAliasKind.email,
             email,
@@ -307,6 +314,8 @@ export class AccountManager {
     }
 
     async storeAlias_email_verified(userId: string, email: string) {
+        email = this.formatEmail(email);
+
         await this.storeUserAlias(userId, email, {
             kind: UserAliasKind.email,
             email,
@@ -316,6 +325,7 @@ export class AccountManager {
 
     async sendEmailVerification_createUserIfNone(sessionToken_request: string, email: string, generateMessage: (verificationToken: string) => EmailMessage) {
         if (!email) { return { error: 'Missing Email' }; }
+        email = this.formatEmail(email);
 
         this.debug.log('sendEmailVerification_createUserIfNone START');
 
@@ -355,6 +365,8 @@ export class AccountManager {
     }
 
     async verifyEmail(sessionToken_request: string, email: string, verificationToken: string) {
+        email = this.formatEmail(email);
+
         const result = await this.login({ kind: UserAliasKind.email, value: email }, { kind: UserEvidenceKind.token_verifyEmail, value: verificationToken }, sessionToken_request);
 
         // Mark Email as verified
@@ -373,6 +385,8 @@ export class AccountManager {
     }
 
     async loginEmailPassword(email: string, password: string, sessionToken_request: string) {
+        email = this.formatEmail(email);
+
         const sessionInfo = await this.login(
             { kind: UserAliasKind.email, value: email },
             { kind: UserEvidenceKind.password, value: password },
